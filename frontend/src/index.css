@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/* ─── Theme tokens ───────────────────────────────────────── */
+@theme {
+  /* Colors */
+  --color-bg: #080b12;
+  --color-surface: #0f1320;
+  --color-surface-2: #141826;
+  --color-surface-hover: #1a2035;
+  --color-border: #1c2236;
+  --color-border-bright: #252d47;
+  --color-accent: #4f7fff;
+  --color-accent-dim: rgba(79, 127, 255, 0.1);
+  --color-teal: #2dd4bf;
+  --color-teal-dim: rgba(45, 212, 191, 0.12);
+  --color-red: #f87171;
+  --color-text-1: #dde3f5;
+  --color-text-2: #7b87aa;
+  --color-text-3: #404762;
+
+  /* Fonts */
+  --font-sans: 'Outfit', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Border radius */
+  --radius-DEFAULT: 6px;
+  --radius-sm: 4px;
+
+  /* Animations */
+  --animate-fade-slide-in: fade-slide-in 0.14s ease-out;
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-spin: spin 0.65s linear infinite;
+
+  @keyframes fade-slide-in {
+    from { opacity: 0; transform: translateY(-3px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+}
+
+/* ─── Base layer ─────────────────────────────────────────── */
+@layer base {
+  body {
+    background: var(--color-bg);
+    color: var(--color-text-1);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-bright); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-3); }
+
+  mark {
+    background: none;
+    color: var(--color-accent);
+    font-weight: 700;
+  }
+}
+
+/* ─── Component helpers (pseudo-elements / gradients) ────── */
+@layer components {
+  .header-gradient::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-teal) 60%, transparent 100%);
+  }
+
+  .size-bar-gradient {
+    background: linear-gradient(90deg, var(--color-teal), var(--color-accent));
+  }
+}

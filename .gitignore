@@ -1,0 +1,6 @@
+node_modules/
+dist/
+**/data/structure_released.xml
+.env
+*.local
+.claude/
