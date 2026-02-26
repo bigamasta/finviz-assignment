@@ -1,6 +1,5 @@
 import type { MouseEvent } from 'react';
 import { useChildren } from '../hooks/useChildren.ts';
-import { useInjectedChildren } from '../hooks/useInjectedChildren.ts';
 import { useScrollIntoView } from '../hooks/useScrollIntoView.ts';
 import type { FlatNode } from '../api/client.ts';
 
@@ -17,19 +16,16 @@ type Props = {
 
 export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTargetPath, onScrollComplete, expandedPaths, toggleExpanded }: Props) {
   const isExpanded = expandedPaths.has(node.path);
+  const isSelected = selectedPath === node.path;
 
-  // Only fetches when expanded; stays disabled (returns undefined) otherwise
-  const { data, isLoading } = useChildren(isExpanded ? node.path : null);
+  const { isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, displayChildren } = useChildren(node.path, selectedPath, isExpanded);
 
   const canExpand = node.hasChildren ?? false;
-  const isSelected = selectedPath === node.path;
 
   // Indentation: base offset (for root-level items) + per-level step
   const paddingLeft = 8 + (depth - 1) * 14 + (depth > 1 ? 4 : 0);
 
   const rowRef = useScrollIntoView(node.path, scrollTargetPath, onScrollComplete);
-
-  const displayChildren = useInjectedChildren(node.path, selectedPath, isExpanded, isLoading, data);
 
   function handleChevronClick(e: MouseEvent) {
     e.stopPropagation();
@@ -95,6 +91,13 @@ export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTa
           {!isLoading && displayChildren.length === 0 && (
             <EmptyChildrenRow depth={depth + 1} />
           )}
+          {hasNextPage && (
+            <LoadMoreRow
+              depth={depth + 1}
+              isLoading={isFetchingNextPage}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          )}
         </div>
       )}
     </div>
@@ -117,5 +120,31 @@ function EmptyChildrenRow({ depth }: { depth: number }) {
     <div className="flex items-center gap-2 py-1.5 text-xs text-text-3 opacity-40" style={{ paddingLeft }}>
       No children
     </div>
+  );
+}
+
+function LoadMoreRow({ depth, isLoading, onLoadMore }: { depth: number; isLoading: boolean; onLoadMore: () => void }) {
+  const paddingLeft = 8 + (depth - 1) * 14 + (depth > 1 ? 4 : 0) + 22;
+  return (
+    <button
+      className="flex items-center gap-1.5 py-1.5 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed w-full text-left"
+      style={{ paddingLeft }}
+      onClick={onLoadMore}
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <>
+          <span className="w-3 h-3 border-2 border-border-bright border-t-accent rounded-full animate-spin shrink-0" />
+          Loading...
+        </>
+      ) : (
+        <>
+          <svg className="w-3 h-3 shrink-0" viewBox="0 0 12 12" fill="none">
+            <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          Load more
+        </>
+      )}
+    </button>
   );
 }
