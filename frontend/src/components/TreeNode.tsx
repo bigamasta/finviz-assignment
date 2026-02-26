@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react';
+import { memo } from 'react';
 import { useChildren } from '../hooks/useChildren.ts';
 import { useScrollIntoView } from '../hooks/useScrollIntoView.ts';
 import type { FlatNode } from '../api/client.ts';
@@ -18,14 +19,93 @@ export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTa
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedPath === node.path;
 
-  const { isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, displayChildren } = useChildren(node.path, selectedPath, isExpanded);
+  return (
+    <div>
+      <NodeRow
+        node={node}
+        depth={depth}
+        isSelected={isSelected}
+        isExpanded={isExpanded}
+        scrollTargetPath={scrollTargetPath}
+        onScrollComplete={onScrollComplete}
+        onSelect={onSelect}
+        toggleExpanded={toggleExpanded}
+      />
+      {isExpanded && (
+        <Children
+          node={node}
+          depth={depth}
+          selectedPath={selectedPath}
+          scrollTargetPath={scrollTargetPath}
+          onScrollComplete={onScrollComplete}
+          onSelect={onSelect}
+          expandedPaths={expandedPaths}
+          toggleExpanded={toggleExpanded}
+        />
+      )}
+    </div>
+  );
+}
 
+type ChildrenProps = {
+  node: FlatNode;
+  depth: number;
+  selectedPath: string | null;
+  scrollTargetPath: string | null;
+  onScrollComplete: () => void;
+  onSelect: (node: FlatNode) => void;
+  expandedPaths: Set<string>;
+  toggleExpanded: (path: string) => void;
+};
+
+const Children = memo(function Children({ node, depth, selectedPath, scrollTargetPath, onScrollComplete, onSelect, expandedPaths, toggleExpanded }: ChildrenProps) {
+  const { isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, displayChildren } = useChildren(node.path, selectedPath, true);
+
+  return (
+    <div className="animate-fade-slide-in">
+      {isLoading && <LoadingRow depth={depth + 1} />}
+      {displayChildren.map((child) => (
+        <TreeNode
+          key={child.path}
+          node={child}
+          depth={depth + 1}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          scrollTargetPath={scrollTargetPath}
+          onScrollComplete={onScrollComplete}
+          expandedPaths={expandedPaths}
+          toggleExpanded={toggleExpanded}
+        />
+      ))}
+      {!isLoading && displayChildren.length === 0 && (
+        <EmptyChildrenRow depth={depth + 1} />
+      )}
+      {hasNextPage && (
+        <LoadMoreRow
+          depth={depth + 1}
+          isLoading={isFetchingNextPage}
+          onLoadMore={() => void fetchNextPage()}
+        />
+      )}
+    </div>
+  );
+});
+
+type NodeRowProps = {
+  node: FlatNode;
+  depth: number;
+  isSelected: boolean;
+  isExpanded: boolean;
+  scrollTargetPath: string | null;
+  onScrollComplete: () => void;
+  onSelect: (node: FlatNode) => void;
+  toggleExpanded: (path: string) => void;
+};
+
+function NodeRow({ node, depth, isSelected, isExpanded, scrollTargetPath, onScrollComplete, onSelect, toggleExpanded }: NodeRowProps) {
   const canExpand = node.hasChildren ?? false;
-
-  // Indentation: base offset (for root-level items) + per-level step
   const paddingLeft = 8 + (depth - 1) * 14 + (depth > 1 ? 4 : 0);
-
-  const rowRef = useScrollIntoView(node.path, scrollTargetPath, onScrollComplete);
+  const ref = useScrollIntoView(node.path, scrollTargetPath, onScrollComplete);
 
   function handleChevronClick(e: MouseEvent) {
     e.stopPropagation();
@@ -40,65 +120,30 @@ export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTa
   }
 
   return (
-    <div>
-      <div
-        ref={rowRef}
-        className={`flex items-center gap-1 pr-3 py-[5px] cursor-pointer hover:bg-surface-hover transition-colors text-sm ${isSelected ? '!bg-accent-dim' : ''}`}
-        style={{ paddingLeft }}
-        onClick={handleRowClick}
-        title={node.path}
+    <div
+      ref={ref}
+      className={`flex items-center gap-1 pr-3 py-[5px] cursor-pointer hover:bg-surface-hover transition-colors text-sm ${isSelected ? '!bg-accent-dim' : ''}`}
+      style={{ paddingLeft }}
+      onClick={handleRowClick}
+      title={node.path}
+    >
+      <button
+        className={`w-[18px] h-[18px] flex items-center justify-center bg-transparent border-none text-text-3 cursor-pointer shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''} ${!canExpand ? 'invisible' : ''}`}
+        onClick={handleChevronClick}
+        tabIndex={canExpand ? 0 : -1}
+        aria-label={isExpanded ? 'Collapse' : 'Expand'}
       >
-        <button
-          className={`w-[18px] h-[18px] flex items-center justify-center bg-transparent border-none text-text-3 cursor-pointer shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''} ${!canExpand ? 'invisible' : ''}`}
-          onClick={handleChevronClick}
-          tabIndex={canExpand ? 0 : -1}
-          aria-label={isExpanded ? 'Collapse' : 'Expand'}
-        >
-          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
-            <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+          <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
 
-        <span className="truncate text-text-1">{node.name}</span>
+      <span className="truncate text-text-1">{node.name}</span>
 
-        {node.size > 0 && (
-          <span className="ml-auto shrink-0 text-xs font-mono text-text-2">
-            {node.size >= 1000
-              ? `${(node.size / 1000).toFixed(1)}k`
-              : node.size}
-          </span>
-        )}
-      </div>
-
-      {isExpanded && (
-        <div className="animate-fade-slide-in">
-          {isLoading && (
-            <LoadingRow depth={depth + 1} />
-          )}
-          {displayChildren.map((child) => (
-            <TreeNode
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              onSelect={onSelect}
-              selectedPath={selectedPath}
-              scrollTargetPath={scrollTargetPath}
-              onScrollComplete={onScrollComplete}
-              expandedPaths={expandedPaths}
-              toggleExpanded={toggleExpanded}
-            />
-          ))}
-          {!isLoading && displayChildren.length === 0 && (
-            <EmptyChildrenRow depth={depth + 1} />
-          )}
-          {hasNextPage && (
-            <LoadMoreRow
-              depth={depth + 1}
-              isLoading={isFetchingNextPage}
-              onLoadMore={() => void fetchNextPage()}
-            />
-          )}
-        </div>
+      {node.size > 0 && (
+        <span className="ml-auto shrink-0 text-xs font-mono text-text-2">
+          {node.size >= 1000 ? `${(node.size / 1000).toFixed(1)}k` : node.size}
+        </span>
       )}
     </div>
   );
