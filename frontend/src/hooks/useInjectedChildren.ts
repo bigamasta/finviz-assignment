@@ -1,4 +1,4 @@
-import type { FlatNode, ChildrenResponse } from '../api/client.ts';
+import type { FlatNode } from '../api/client.ts';
 
 /**
  * When a node is expanded and `selectedPath` is a descendant of it,
@@ -17,8 +17,8 @@ function getNextPathStep(nodePath: string, selectedPath: string | null): string 
 /**
  * Returns the children list to render for a tree node, with a synthetic node
  * injected when the next ancestor toward `selectedPath` is missing from the
- * API response (happens when a parent has >100 children and the target falls
- * outside the first page).
+ * loaded pages (happens when a parent has >100 children and the target falls
+ * outside the fetched pages).
  *
  * The injected node is a placeholder that triggers `useChildren` for the real
  * path, allowing the expand cascade to continue past the pagination boundary.
@@ -28,17 +28,16 @@ export function useInjectedChildren(
   selectedPath: string | null,
   isExpanded: boolean,
   isLoading: boolean,
-  data: ChildrenResponse | undefined,
+  children: FlatNode[],
+  hasData: boolean,
 ): FlatNode[] {
-  const apiChildren = data?.children ?? [];
-
   const nextPathStepPath =
-    isExpanded && !isLoading && data
+    isExpanded && !isLoading && hasData
       ? getNextPathStep(nodePath, selectedPath)
       : null;
 
   const injectedPathStep: FlatNode | null =
-    nextPathStepPath && !apiChildren.some((c) => c.path === nextPathStepPath)
+    nextPathStepPath && !children.some((c) => c.path === nextPathStepPath)
       ? {
           path: nextPathStepPath,
           name: nextPathStepPath.split(' > ').pop() ?? '',
@@ -47,5 +46,5 @@ export function useInjectedChildren(
         }
       : null;
 
-  return injectedPathStep ? [injectedPathStep, ...apiChildren] : apiChildren;
+  return injectedPathStep ? [injectedPathStep, ...children] : children;
 }
