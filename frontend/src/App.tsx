@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRoot } from './hooks/useChildren.ts';
 import { useDebounced } from './hooks/useDebounced.ts';
+import { useExpandedPaths } from './hooks/useExpandedPaths.ts';
 import TreeExplorer from './components/TreeExplorer.tsx';
 import NodeDetail from './components/NodeDetail.tsx';
 import SearchResults from './components/SearchResults.tsx';
@@ -9,6 +10,8 @@ import type { FlatNode } from './api/client.ts';
 function App() {
   const [selected, setSelected] = useState<FlatNode | null>(null);
   const [searchInput, setSearchInput] = useState('');
+  const [scrollTargetPath, setScrollTargetPath] = useState<string | null>(null);
+  const { expandedPaths, toggleExpanded, collapseAll, expandToNode } = useExpandedPaths();
   const debouncedSearch = useDebounced(searchInput, 300);
 
   const { data: rootData } = useRoot();
@@ -16,9 +19,13 @@ function App() {
 
   const isSearching = debouncedSearch.trim().length >= 2;
 
+  const clearScrollTarget = useCallback(() => setScrollTargetPath(null), []);
+
   function handleSearchSelect(node: FlatNode) {
     setSelected(node);
     setSearchInput('');
+    setScrollTargetPath(node.path);
+    expandToNode(node.path);
   }
 
   return (
@@ -56,7 +63,15 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-[300px] shrink-0 border-r border-border overflow-y-auto bg-surface">
-          <TreeExplorer onSelect={setSelected} selectedPath={selected?.path ?? null} />
+          <TreeExplorer
+            onSelect={setSelected}
+            selectedPath={selected?.path ?? null}
+            scrollTargetPath={scrollTargetPath}
+            onScrollComplete={clearScrollTarget}
+            expandedPaths={expandedPaths}
+            toggleExpanded={toggleExpanded}
+            collapseAll={collapseAll}
+          />
         </aside>
 
         <main className="flex-1 overflow-y-auto p-6">
