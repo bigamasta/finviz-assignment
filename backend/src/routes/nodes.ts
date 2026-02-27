@@ -62,7 +62,7 @@ export async function nodesRoutes(app: FastifyInstance) {
       const lim = Math.min(parseInt(limit, 10) || 100, 500)
       const off = parseInt(offset, 10) || 0
 
-      const [children, countResult] = await Promise.all([
+      const [children, [countResult]] = await Promise.all([
         sql<{ path: string; name: string; size: number }[]>`
           SELECT path, name, size
           FROM taxonomy_nodes
@@ -97,7 +97,7 @@ export async function nodesRoutes(app: FastifyInstance) {
           ...childNode,
           hasChildren: childrenWithChildren.has(childNode.path),
         })),
-        total: parseInt(countResult[0]?.count ?? '0', 10),
+        total: parseInt(countResult.count, 10),
       }
     },
   )

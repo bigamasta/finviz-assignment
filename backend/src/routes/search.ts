@@ -31,7 +31,7 @@ export async function searchRoutes(app: FastifyInstance) {
       const off = parseInt(offset, 10) || 0;
       const pattern = `%${q.trim()}%`;
 
-      const [results, countResult] = await Promise.all([
+      const [results, [countResult]] = await Promise.all([
         sql<{ path: string; name: string; size: number }[]>`
           SELECT path, name, size
           FROM taxonomy_nodes
@@ -48,7 +48,7 @@ export async function searchRoutes(app: FastifyInstance) {
 
       return {
         results,
-        total: parseInt(countResult[0]?.count ?? '0', 10),
+        total: parseInt(countResult.count, 10),
         query: q.trim(),
         limit: lim,
         offset: off,
