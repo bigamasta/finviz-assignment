@@ -18,7 +18,7 @@ export function useExpandedPaths() {
     setNavTargetPaths([]);
   }, []);
 
-  /** Append a new nav target — previous targets remain visible, no sibling fetches triggered. */
+  /** Add a path to the nav targets list so the tree reveals the ancestor chain without fetching siblings. */
   const expandToNode = useCallback((path: string) => {
     setNavTargetPaths((prev) => [...prev, path]);
   }, []);
