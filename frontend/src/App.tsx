@@ -3,8 +3,9 @@ import { useRoot } from './hooks/useChildren.ts'
 import { useDebounced } from './hooks/useDebounced.ts'
 import { useExpandedPaths } from './hooks/useExpandedPaths.ts'
 import TreeExplorer from './components/TreeExplorer.tsx'
+
 import NodeDetail from './components/NodeDetail/index.tsx'
-import SearchResults from './components/SearchResults.tsx'
+import SearchResults from './components/SearchResults/index.tsx'
 import type { FlatNode } from './api/client.ts'
 
 function App() {
