@@ -1,5 +1,5 @@
 type Props = {
-  size: number
+  size: number | null
   depth: number
   percentOfRootLabel: string
 }
@@ -12,7 +12,7 @@ export default function Stats({ size, depth, percentOfRootLabel }: Props) {
           Subtree Images
         </div>
         <div className="text-2xl font-semibold font-mono text-teal">
-          {size.toLocaleString()}
+          {size?.toLocaleString() ?? '—'}
         </div>
       </div>
 

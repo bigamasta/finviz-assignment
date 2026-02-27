@@ -148,7 +148,7 @@ function NodeRow({ node, depth }: NodeRowProps) {
 
       <span className="truncate text-text-1">{node.name}</span>
 
-      {node.size > 0 && (
+      {node.size != null && node.size > 0 && (
         <span className="ml-auto shrink-0 text-xs font-mono text-text-2">
           {formatSize(node.size)}
         </span>

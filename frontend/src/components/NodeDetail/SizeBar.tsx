@@ -1,5 +1,5 @@
 type Props = {
-  size: number
+  size: number | null
   rootSize: number
   percentOfRoot: number
 }
@@ -17,7 +17,7 @@ export default function SizeBar({ size, rootSize, percentOfRoot }: Props) {
         />
       </div>
       <div className="flex justify-between text-xs text-text-3 mt-2">
-        <span>{size.toLocaleString()} images in subtree</span>
+        <span>{size?.toLocaleString() ?? '—'} images in subtree</span>
         <span>of {rootSize.toLocaleString()} total</span>
       </div>
     </div>
