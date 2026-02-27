@@ -8,6 +8,7 @@ type Props = {
   scrollTargetPath: string | null;
   onScrollComplete: () => void;
   expandedPaths: Set<string>;
+  navTargetPaths: string[];
   toggleExpanded: (path: string) => void;
   collapseAll: () => void;
 };
@@ -45,7 +46,7 @@ function TreeToolbar({ onCollapseAll }: { onCollapseAll: () => void }) {
   );
 }
 
-export default function TreeExplorer({ onSelect, selectedPath, scrollTargetPath, onScrollComplete, expandedPaths, toggleExpanded, collapseAll }: Props) {
+export default function TreeExplorer({ onSelect, selectedPath, scrollTargetPath, onScrollComplete, expandedPaths, navTargetPaths, toggleExpanded, collapseAll }: Props) {
   const { data, isLoading, error } = useRoot();
 
   if (isLoading) {
@@ -86,6 +87,7 @@ export default function TreeExplorer({ onSelect, selectedPath, scrollTargetPath,
             scrollTargetPath={scrollTargetPath}
             onScrollComplete={onScrollComplete}
             expandedPaths={expandedPaths}
+            navTargetPaths={navTargetPaths}
             toggleExpanded={toggleExpanded}
           />
         ))}

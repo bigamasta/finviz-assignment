@@ -5,8 +5,25 @@ import type { FlatNode } from "../api/client.ts";
 
 const PAGE_SIZE = 100;
 
-export function useChildren(nodePath: string, selectedPath: string | null, isExpanded: boolean) {
-  const path = isExpanded ? nodePath : null;
+/** Returns one synthetic child per nav target that passes through this node. */
+function getNavDisplayChildren(nodePath: string, navTargetPaths: string[]): FlatNode[] {
+  const prefix = nodePath + ' > ';
+  const seen = new Set<string>();
+  const result: FlatNode[] = [];
+  for (const targetPath of navTargetPaths) {
+    if (!targetPath.startsWith(prefix)) continue;
+    const nextSegment = targetPath.slice(prefix.length).split(' > ')[0];
+    const nextPath = `${prefix}${nextSegment}`;
+    if (!seen.has(nextPath)) {
+      seen.add(nextPath);
+      result.push({ path: nextPath, name: nextSegment, size: 0, hasChildren: nextPath !== targetPath });
+    }
+  }
+  return result;
+}
+
+export function useChildren(nodePath: string, selectedPath: string | null, isExpanded: boolean, isNavExpanded: boolean, navTargetPaths: string[]) {
+  const path = isExpanded && !isNavExpanded ? nodePath : null;
 
   const query = useInfiniteQuery({
     queryKey: ["children", path],
@@ -20,7 +37,8 @@ export function useChildren(nodePath: string, selectedPath: string | null, isExp
   });
 
   const allChildren: FlatNode[] = query.data?.pages.flatMap((p) => p.children) ?? [];
-  const displayChildren = useInjectedChildren(nodePath, selectedPath, isExpanded, query.isLoading, allChildren, !!query.data);
+  const normalDisplayChildren = useInjectedChildren(nodePath, selectedPath, isExpanded, query.isLoading, allChildren, !!query.data);
+  const displayChildren = isNavExpanded ? getNavDisplayChildren(nodePath, navTargetPaths) : normalDisplayChildren;
 
   return { ...query, displayChildren };
 }

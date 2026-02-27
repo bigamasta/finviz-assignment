@@ -12,11 +12,14 @@ type Props = {
   scrollTargetPath: string | null;
   onScrollComplete: () => void;
   expandedPaths: Set<string>;
+  navTargetPaths: string[];
   toggleExpanded: (path: string) => void;
 };
 
-export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTargetPath, onScrollComplete, expandedPaths, toggleExpanded }: Props) {
-  const isExpanded = expandedPaths.has(node.path);
+export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTargetPath, onScrollComplete, expandedPaths, navTargetPaths, toggleExpanded }: Props) {
+  const isManualExpanded = expandedPaths.has(node.path);
+  const isNavExpanded = !isManualExpanded && navTargetPaths.some((t) => t.startsWith(node.path + ' > '));
+  const isExpanded = isManualExpanded || isNavExpanded;
   const isSelected = selectedPath === node.path;
 
   return (
@@ -40,6 +43,8 @@ export default function TreeNode({ node, depth, onSelect, selectedPath, scrollTa
           onScrollComplete={onScrollComplete}
           onSelect={onSelect}
           expandedPaths={expandedPaths}
+          navTargetPaths={navTargetPaths}
+          isNavExpanded={isNavExpanded}
           toggleExpanded={toggleExpanded}
         />
       )}
@@ -55,11 +60,13 @@ type ChildrenProps = {
   onScrollComplete: () => void;
   onSelect: (node: FlatNode) => void;
   expandedPaths: Set<string>;
+  navTargetPaths: string[];
+  isNavExpanded: boolean;
   toggleExpanded: (path: string) => void;
 };
 
-const Children = memo(function Children({ node, depth, selectedPath, scrollTargetPath, onScrollComplete, onSelect, expandedPaths, toggleExpanded }: ChildrenProps) {
-  const { isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, displayChildren } = useChildren(node.path, selectedPath, true);
+const Children = memo(function Children({ node, depth, selectedPath, scrollTargetPath, onScrollComplete, onSelect, expandedPaths, navTargetPaths, isNavExpanded, toggleExpanded }: ChildrenProps) {
+  const { isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, displayChildren } = useChildren(node.path, selectedPath, true, isNavExpanded, navTargetPaths);
 
   return (
     <div className="animate-fade-slide-in">
@@ -74,13 +81,21 @@ const Children = memo(function Children({ node, depth, selectedPath, scrollTarge
           scrollTargetPath={scrollTargetPath}
           onScrollComplete={onScrollComplete}
           expandedPaths={expandedPaths}
+          navTargetPaths={navTargetPaths}
           toggleExpanded={toggleExpanded}
         />
       ))}
       {!isLoading && displayChildren.length === 0 && (
         <EmptyChildrenRow depth={depth + 1} />
       )}
-      {hasNextPage && (
+      {isNavExpanded && (
+        <LoadMoreRow
+          depth={depth + 1}
+          isLoading={false}
+          onLoadMore={() => toggleExpanded(node.path)}
+        />
+      )}
+      {!isNavExpanded && hasNextPage && (
         <LoadMoreRow
           depth={depth + 1}
           isLoading={isFetchingNextPage}
