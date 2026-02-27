@@ -12,8 +12,14 @@ function App() {
   const [selected, setSelected] = useState<FlatNode | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const [scrollTargetPath, setScrollTargetPath] = useState<string | null>(null)
-  const { expandedPaths, toggleExpanded, collapseAll, expandToNode } =
-    useExpandedPaths()
+  const {
+    expandedPaths,
+    pathsWithDisabledFetch,
+    toggleExpanded,
+    collapseAll,
+    expandToNode,
+    removeFromDisabledFetch,
+  } = useExpandedPaths()
   const debouncedSearch = useDebounced(searchInput, 300)
 
   const { data: rootData } = useRoot()
@@ -97,6 +103,8 @@ function App() {
             expandedPaths={expandedPaths}
             toggleExpanded={toggleExpanded}
             collapseAll={collapseAll}
+            pathsWithDisabledFetch={pathsWithDisabledFetch}
+            removeFromDisabledFetch={removeFromDisabledFetch}
           />
         </aside>
 
