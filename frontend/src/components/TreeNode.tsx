@@ -140,10 +140,6 @@ const Children = memo(function Children({
         />
       ))}
 
-      {!isLoading && !isFetchDisabled && displayedChildren.length === 0 && (
-        <EmptyChildrenRow depth={childDepth} />
-      )}
-
       {isFetchDisabled && (
         <LoadRow
           depth={childDepth}
@@ -242,18 +238,6 @@ function LoadingRow({ depth }: { depth: number }) {
     >
       <span className="w-3 h-3 border-2 border-border-bright border-t-accent rounded-full animate-spin shrink-0" />
       Loading...
-    </div>
-  )
-}
-
-function EmptyChildrenRow({ depth }: { depth: number }) {
-  const paddingLeft = indentPadding(depth, true)
-  return (
-    <div
-      className="flex items-center gap-2 py-1.5 text-xs text-text-3 opacity-40"
-      style={{ paddingLeft }}
-    >
-      No children
     </div>
   )
 }
