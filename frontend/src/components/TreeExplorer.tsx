@@ -19,7 +19,7 @@ function RootNode({ node }: { node: FlatNode }) {
         {node.name}
       </span>
       <span className="ml-auto text-xs font-mono text-text-3 bg-surface-2 px-1.5 py-0.5 rounded-sm">
-        {node.size.toLocaleString()}
+        {node.size?.toLocaleString() ?? '—'}
       </span>
     </div>
   )

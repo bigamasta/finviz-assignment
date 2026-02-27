@@ -33,7 +33,7 @@ export function mergeExpandedChildren(
       result = insertSorted(result, {
         path: expandedPath,
         name: expandedPath.split(' > ').pop() ?? '',
-        size: 0,
+        size: null, // unknown — synthetic node not yet returned by the API
         hasChildren: expandedPath !== selectedPath,
       })
     }
