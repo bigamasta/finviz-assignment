@@ -49,7 +49,7 @@ finviz-assignment/
 └── frontend/                # React + TypeScript (Vite)
     └── src/
         ├── api/client.ts    # typed fetch wrapper
-        ├── hooks/           # TanStack Query hooks
+        ├── hooks/           # TanStack Query hooks + useExpandedPaths
         └── components/      # TreeExplorer, TreeNode, NodeDetail, SearchResults
 ```
 

@@ -1,45 +1,47 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { XMLParser } from 'fast-xml-parser';
-import { sql } from '../db/index.js';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { XMLParser } from 'fast-xml-parser'
+import { sql } from '../db/index.js'
+import assert from 'assert'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const XML_URL =
-  'https://raw.githubusercontent.com/tzutalin/ImageNet_Utils/master/detection_eval_tools/structure_released.xml';
+  'https://raw.githubusercontent.com/tzutalin/ImageNet_Utils/master/detection_eval_tools/structure_released.xml'
 
 type FlatRecord = {
-  path: string;
-  name: string;
-  parent_path: string | null;
-  depth: number;
-  size: number; // total number of descendant synsets
-};
+  path: string
+  name: string
+  parent_path: string | null
+  depth: number
+  size: number // total number of descendant synsets
+}
 
 // ── XML path resolution ─────────────────────────────────────
 function resolveXmlPath(): string {
-  if (process.env.XML_PATH) return process.env.XML_PATH;
+  if (process.env.XML_PATH) return process.env.XML_PATH
   const candidates = [
     join(process.cwd(), 'data', 'structure_released.xml'),
     join(__dirname, '..', '..', '..', 'data', 'structure_released.xml'),
-  ];
-  return candidates.find(existsSync) ?? candidates[0];
+  ]
+  return candidates.find(existsSync) ?? candidates[0]
 }
 
 async function ensureXmlExists(xmlPath: string): Promise<void> {
   if (existsSync(xmlPath)) {
-    console.log(`XML found at: ${xmlPath}`);
-    return;
+    console.log(`XML found at: ${xmlPath}`)
+    return
   }
-  console.log(`XML not found at ${xmlPath}. Downloading from GitHub...`);
-  const dir = dirname(xmlPath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  console.log(`XML not found at ${xmlPath}. Downloading from GitHub...`)
+  const dir = dirname(xmlPath)
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
 
-  const res = await fetch(XML_URL);
-  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
-  writeFileSync(xmlPath, await res.text(), 'utf-8');
-  console.log('Download complete.');
+  const res = await fetch(XML_URL)
+  if (!res.ok)
+    throw new Error(`Download failed: ${res.status} ${res.statusText}`)
+  writeFileSync(xmlPath, await res.text(), 'utf-8')
+  console.log('Download complete.')
 }
 
 // ── XML Parsing ─────────────────────────────────────────────
@@ -62,28 +64,35 @@ function parseXML(xmlContent: string): FlatRecord[] {
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     isArray: (name) => name === 'synset',
-  });
+  })
 
-  const doc = parser.parse(xmlContent) as Record<string, unknown>;
-  const records: FlatRecord[] = [];
+  const doc = parser.parse(xmlContent) as Record<string, unknown>
+  const records: FlatRecord[] = []
 
-  const structure = doc['ImageNetStructure'] as Record<string, unknown> | undefined;
-  const topSynsets = structure?.['synset'] as unknown[] | undefined;
+  const structure = doc['ImageNetStructure'] as
+    | Record<string, unknown>
+    | undefined
+  const topSynsets = structure?.['synset'] as unknown[] | undefined
 
   if (!topSynsets || topSynsets.length === 0) {
-    throw new Error('Could not find root synset — unexpected XML structure');
+    throw new Error('Could not find root synset — unexpected XML structure')
   }
 
-  const rootSynset = topSynsets[0] as Record<string, unknown>;
-  const rootName = (rootSynset['@_words'] as string) ?? 'ImageNet 2011 Fall Release';
+  const rootSynset = topSynsets[0] as Record<string, unknown>
+  const rootName = rootSynset['@_words'] as string
+
+  assert(
+    rootName !== undefined,
+    'XML is missing data: root synset has no words attribute.',
+  )
 
   // Traverse children first to get the descendant count for the root
-  const rootDescendants = traverseSynsets(
+  const rootChildrenCount = traverseSynsets(
     (rootSynset['synset'] as unknown[] | undefined) ?? [],
     rootName,
     1,
     records,
-  );
+  )
 
   // Insert root at front (depth 0, no parent)
   records.unshift({
@@ -91,10 +100,10 @@ function parseXML(xmlContent: string): FlatRecord[] {
     name: rootName,
     parent_path: null,
     depth: 0,
-    size: rootDescendants,
-  });
+    size: rootChildrenCount,
+  })
 
-  return records;
+  return records
 }
 
 /**
@@ -112,20 +121,19 @@ function traverseSynsets(
   depth: number,
   records: FlatRecord[],
 ): number {
-  let totalForParent = 0;
+  let totalForParent = 0
 
   for (const item of synsets) {
-    const s = item as Record<string, unknown>;
-    const words =
-      (s['@_words'] as string | undefined) ??
-      (s['@_wnid'] as string | undefined) ??
-      'unknown';
-    const currentPath = `${parentPath} > ${words}`;
-    const children = s['synset'] as unknown[] | undefined;
+    const synset = item as Record<string, unknown>
+    const words = synset['@_words'] as string | undefined
+    assert(words !== undefined, 'XML is missing data.')
+
+    const currentPath = `${parentPath} > ${words}`
+    const children = synset['synset'] as unknown[] | undefined
 
     const childDescendants = children
       ? traverseSynsets(children, currentPath, depth + 1, records)
-      : 0;
+      : 0
 
     records.push({
       path: currentPath,
@@ -133,60 +141,67 @@ function traverseSynsets(
       parent_path: parentPath,
       depth,
       size: childDescendants, // = number of descendants of this node
-    });
+    })
 
-    totalForParent += 1 + childDescendants;
+    totalForParent += 1 + childDescendants
   }
 
-  return totalForParent;
+  return totalForParent
 }
 
 // ── DB Insert ───────────────────────────────────────────────
-async function batchInsert(records: FlatRecord[], batchSize = 1000): Promise<void> {
-  console.log(`Inserting ${records.length} records in batches of ${batchSize}...`);
-  let inserted = 0;
+async function batchInsert(
+  records: FlatRecord[],
+  batchSize = 1000,
+): Promise<void> {
+  console.log(
+    `Inserting ${records.length} records in batches of ${batchSize}...`,
+  )
+  let inserted = 0
 
   for (let i = 0; i < records.length; i += batchSize) {
-    const batch = records.slice(i, i + batchSize);
+    const batch = records.slice(i, i + batchSize)
     await sql`
       INSERT INTO taxonomy_nodes ${sql(batch, 'path', 'name', 'parent_path', 'depth', 'size')}
       ON CONFLICT (path) DO NOTHING
-    `;
-    inserted += batch.length;
-    process.stdout.write(`\r  ${inserted}/${records.length}`);
+    `
+    inserted += batch.length
+    process.stdout.write(`\r  ${inserted}/${records.length}`)
   }
 
-  console.log('\nInsert complete.');
+  console.log('\nInsert complete.')
 }
 
 // ── Main ────────────────────────────────────────────────────
 async function main() {
-  const xmlPath = resolveXmlPath();
-  await ensureXmlExists(xmlPath);
+  const xmlPath = resolveXmlPath()
+  await ensureXmlExists(xmlPath)
 
-  console.log('Parsing XML...');
-  const xmlContent = readFileSync(xmlPath, 'utf-8');
-  const records = parseXML(xmlContent);
-  console.log(`Parsed ${records.length} nodes.`);
-  console.log(`Root: "${records[0]?.name}" — size: ${records[0]?.size.toLocaleString()} descendants`);
+  console.log('Parsing XML...')
+  const xmlContent = readFileSync(xmlPath, 'utf-8')
+  const records = parseXML(xmlContent)
+  console.log(`Parsed ${records.length} nodes.`)
+  console.log(
+    `Root: "${records[0]?.name}" — size: ${records[0]?.size.toLocaleString()} descendants`,
+  )
 
   if (records.length === 0) {
-    console.error('No records parsed — check the XML structure.');
-    process.exit(1);
+    console.error('No records parsed — check the XML structure.')
+    process.exit(1)
   }
 
   // Truncate before re-inserting so re-runs are idempotent
-  await sql`TRUNCATE taxonomy_nodes RESTART IDENTITY`;
-  await batchInsert(records);
+  await sql`TRUNCATE taxonomy_nodes RESTART IDENTITY`
+  await batchInsert(records)
 
   const [{ count }] = await sql<{ count: string }[]>`
     SELECT COUNT(*)::text AS count FROM taxonomy_nodes
-  `;
-  console.log(`DB now has ${count} rows.`);
-  await sql.end();
+  `
+  console.log(`DB now has ${count} rows.`)
+  await sql.end()
 }
 
 main().catch((err) => {
-  console.error('Ingest failed:', err);
-  process.exit(1);
-});
+  console.error('Ingest failed:', err)
+  process.exit(1)
+})
