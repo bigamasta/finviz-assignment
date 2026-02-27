@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRoot } from './hooks/useChildren.ts'
 import { useDebounced } from './hooks/useDebounced.ts'
 import { useTreeStore } from './store/treeStore.ts'
@@ -21,12 +21,15 @@ function App() {
 
   const isSearching = debouncedSearch.trim().length >= 2
 
-  function handleSearchSelect(node: FlatNode) {
-    setSelectedNode(node)
-    setSearchInput('')
-    setScrollTargetPath(node.path)
-    expandToNode(node.path)
-  }
+  const handleSearchSelect = useCallback(
+    (node: FlatNode) => {
+      setSelectedNode(node)
+      setSearchInput('')
+      setScrollTargetPath(node.path)
+      expandToNode(node.path)
+    },
+    [setSelectedNode, setSearchInput, setScrollTargetPath, expandToNode],
+  )
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
