@@ -24,7 +24,7 @@ export function ResultItem({ node, query, onSelect }: ResultItemProps) {
           {node.path}
         </div>
       </div>
-      {node.size > 0 && (
+      {node.size != null && node.size > 0 && (
         <span className="shrink-0 text-xs font-mono text-teal bg-teal-dim px-2 py-0.5 rounded-sm">
           {node.size.toLocaleString()}
         </span>

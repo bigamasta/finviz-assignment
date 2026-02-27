@@ -11,7 +11,7 @@ type Props = {
 export default function NodeDetail({ node, rootSize }: Props) {
   const segments = node.path.split(' > ')
   const depth = segments.length - 1
-  const percentOfRoot = rootSize > 0 ? (node.size / rootSize) * 100 : 0
+  const percentOfRoot = rootSize > 0 && node.size != null ? (node.size / rootSize) * 100 : 0
   const percentOfRootLabel =
     percentOfRoot < 0.01 ? '<0.01' : percentOfRoot.toFixed(2)
 

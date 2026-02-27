@@ -3,7 +3,7 @@ const BASE = '/api';
 export type FlatNode = {
   path: string;
   name: string;
-  size: number;
+  size: number | null;
   hasChildren?: boolean;
 };
 
