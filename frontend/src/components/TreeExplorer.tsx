@@ -4,9 +4,8 @@ import TreeNode from './TreeNode.tsx'
 import type { FlatNode } from '../api/client.ts'
 
 function RootNode({ node }: { node: FlatNode }) {
-  const selectedNode = useTreeStore((s) => s.selectedNode)
+  const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
   const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
-  const isSelected = selectedNode?.path === node.path
 
   return (
     <div
