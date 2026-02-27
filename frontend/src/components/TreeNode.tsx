@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import { memo } from 'react'
 import { useChildren } from '../hooks/useChildren.ts'
+import { mergeExpandedChildren } from '../utils/treeChildren.ts'
 import { useScrollIntoView } from '../hooks/useScrollIntoView.ts'
 import type { FlatNode } from '../api/client.ts'
 
@@ -13,6 +14,8 @@ type Props = {
   onScrollComplete: () => void
   expandedPaths: Set<string>
   toggleExpanded: (path: string) => void
+  pathsWithDisabledFetch: Set<string>
+  removeFromDisabledFetch: (path: string) => void
 }
 
 /**
@@ -38,6 +41,8 @@ export default function TreeNode({
   onScrollComplete,
   expandedPaths,
   toggleExpanded,
+  pathsWithDisabledFetch,
+  removeFromDisabledFetch,
 }: Props) {
   const isExpanded = expandedPaths.has(node.path)
   const isSelected = selectedPath === node.path
@@ -64,6 +69,8 @@ export default function TreeNode({
           onSelect={onSelect}
           expandedPaths={expandedPaths}
           toggleExpanded={toggleExpanded}
+          pathsWithDisabledFetch={pathsWithDisabledFetch}
+          removeFromDisabledFetch={removeFromDisabledFetch}
         />
       )}
     </div>
@@ -79,6 +86,8 @@ type ChildrenProps = {
   onSelect: (node: FlatNode) => void
   expandedPaths: Set<string>
   toggleExpanded: (path: string) => void
+  pathsWithDisabledFetch: Set<string>
+  removeFromDisabledFetch: (path: string) => void
 }
 
 const Children = memo(function Children({
@@ -90,21 +99,32 @@ const Children = memo(function Children({
   onSelect,
   expandedPaths,
   toggleExpanded,
+  pathsWithDisabledFetch,
+  removeFromDisabledFetch,
 }: ChildrenProps) {
+  const isFetchDisabled = pathsWithDisabledFetch.has(node.path)
   const {
     isLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    displayChildren,
-  } = useChildren(node.path, selectedPath, true)
+    fetchedChildren,
+  } = useChildren(node.path, isFetchDisabled)
+
+  const displayedChildren = mergeExpandedChildren(
+    fetchedChildren,
+    expandedPaths,
+    node.path,
+    selectedPath,
+  )
+
   const childDepth = depth + 1
 
   return (
     <div className="animate-fade-slide-in">
       {isLoading && <LoadingRow depth={childDepth} />}
 
-      {displayChildren.map((child) => (
+      {displayedChildren.map((child) => (
         <TreeNode
           key={child.path}
           node={child}
@@ -115,11 +135,20 @@ const Children = memo(function Children({
           onScrollComplete={onScrollComplete}
           expandedPaths={expandedPaths}
           toggleExpanded={toggleExpanded}
+          pathsWithDisabledFetch={pathsWithDisabledFetch}
+          removeFromDisabledFetch={removeFromDisabledFetch}
         />
       ))}
 
-      {!isLoading && displayChildren.length === 0 && (
+      {!isLoading && !isFetchDisabled && displayedChildren.length === 0 && (
         <EmptyChildrenRow depth={childDepth} />
+      )}
+
+      {isFetchDisabled && (
+        <LoadRow
+          depth={childDepth}
+          onLoad={() => removeFromDisabledFetch(node.path)}
+        />
       )}
 
       {hasNextPage && (
@@ -226,6 +255,27 @@ function EmptyChildrenRow({ depth }: { depth: number }) {
     >
       No children
     </div>
+  )
+}
+
+function LoadRow({ depth, onLoad }: { depth: number; onLoad: () => void }) {
+  const paddingLeft = indentPadding(depth, true)
+  return (
+    <button
+      className="flex items-center gap-1.5 py-1.5 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer bg-transparent border-none w-full text-left"
+      style={{ paddingLeft }}
+      onClick={onLoad}
+    >
+      <svg className="w-3 h-3 shrink-0" viewBox="0 0 12 12" fill="none">
+        <path
+          d="M6 1v10M1 6h10"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+      Load
+    </button>
   )
 }
 

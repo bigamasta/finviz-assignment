@@ -10,6 +10,8 @@ type Props = {
   expandedPaths: Set<string>
   toggleExpanded: (path: string) => void
   collapseAll: () => void
+  pathsWithDisabledFetch: Set<string>
+  removeFromDisabledFetch: (path: string) => void
 }
 
 function RootNode({
@@ -68,6 +70,8 @@ export default function TreeExplorer({
   expandedPaths,
   toggleExpanded,
   collapseAll,
+  pathsWithDisabledFetch,
+  removeFromDisabledFetch,
 }: Props) {
   const { data, isLoading, error } = useRoot()
 
@@ -112,6 +116,8 @@ export default function TreeExplorer({
             onScrollComplete={onScrollComplete}
             expandedPaths={expandedPaths}
             toggleExpanded={toggleExpanded}
+            pathsWithDisabledFetch={pathsWithDisabledFetch}
+            removeFromDisabledFetch={removeFromDisabledFetch}
           />
         ))}
       </div>
