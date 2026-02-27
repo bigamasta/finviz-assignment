@@ -20,7 +20,7 @@ function findChildPathToward(nodePath: string, selectedPath: string | null): str
 /**
  * Inserts a node into a sorted children array by name, preserving sort order.
  */
-function insertSorted(children: FlatNode[], node: FlatNode): FlatNode[] {
+export function insertSorted(children: FlatNode[], node: FlatNode): FlatNode[] {
   const insertAt = children.findIndex((c) => c.name.localeCompare(node.name) > 0);
   if (insertAt === -1) return [...children, node];
   return [...children.slice(0, insertAt), node, ...children.slice(insertAt)];
@@ -35,28 +35,28 @@ function insertSorted(children: FlatNode[], node: FlatNode): FlatNode[] {
  * for the real path, allowing the expand cascade to continue past the
  * pagination boundary.
  */
-export function useInjectedChildren(
+export function useOutOfPageChild(
   nodePath: string,
   selectedPath: string | null,
   isExpanded: boolean,
   isLoading: boolean,
   children: FlatNode[],
   hasData: boolean,
-): FlatNode[] {
-  const canInject = isExpanded && !isLoading && hasData;
-  const targetChildPath = canInject ? findChildPathToward(nodePath, selectedPath) : null;
+): FlatNode | null {
+  const canInject = isExpanded && !isLoading && hasData
+  const targetChildPath = canInject
+    ? findChildPathToward(nodePath, selectedPath)
+    : null
 
   // If the target child is already in the fetched children, no injection needed.
   if (!targetChildPath || children.some((c) => c.path === targetChildPath)) {
-    return children;
+    return null
   }
 
-  const syntheticChild: FlatNode = {
+  return {
     path: targetChildPath,
     name: targetChildPath.split(' > ').pop() ?? '',
     size: 0,
     hasChildren: targetChildPath !== selectedPath,
-  };
-
-  return insertSorted(children, syntheticChild);
+  }
 }

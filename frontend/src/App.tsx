@@ -12,14 +12,8 @@ function App() {
   const [selected, setSelected] = useState<FlatNode | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const [scrollTargetPath, setScrollTargetPath] = useState<string | null>(null)
-  const {
-    expandedPaths,
-    navTargetPaths,
-    toggleExpanded,
-    collapseAll,
-    expandToNode,
-    clearNavTarget,
-  } = useExpandedPaths()
+  const { expandedPaths, toggleExpanded, collapseAll, expandToNode } =
+    useExpandedPaths()
   const debouncedSearch = useDebounced(searchInput, 300)
 
   const { data: rootData } = useRoot()
@@ -29,13 +23,9 @@ function App() {
 
   const clearScrollTarget = useCallback(() => setScrollTargetPath(null), [])
 
-  const handleTreeSelect = useCallback(
-    (node: FlatNode) => {
-      setSelected(node)
-      clearNavTarget()
-    },
-    [clearNavTarget],
-  )
+  const handleTreeSelect = useCallback((node: FlatNode) => {
+    setSelected(node)
+  }, [])
 
   function handleSearchSelect(node: FlatNode) {
     setSelected(node)
@@ -105,7 +95,6 @@ function App() {
             scrollTargetPath={scrollTargetPath}
             onScrollComplete={clearScrollTarget}
             expandedPaths={expandedPaths}
-            navTargetPaths={navTargetPaths}
             toggleExpanded={toggleExpanded}
             collapseAll={collapseAll}
           />
