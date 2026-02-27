@@ -1,27 +1,39 @@
 import type { FlatNode } from '../api/client.ts';
 
 /**
- * When a node is expanded and `selectedPath` is a descendant of it,
- * returns the path of the immediate child that leads toward selectedPath.
- * Returns null otherwise.
+ * Given a parent node path and a selected descendant path, returns the
+ * immediate child path that leads toward the selected node.
+ * Returns null if selectedPath is not a descendant of nodePath.
+ *
+ * @example
+ * findChildPathToward('fall11 > n00001', 'fall11 > n00001 > n00002 > n00003')
+ * // => 'fall11 > n00001 > n00002'
  */
-function getNextPathStep(nodePath: string, selectedPath: string | null): string | null {
+function findChildPathToward(nodePath: string, selectedPath: string | null): string | null {
   if (!selectedPath) return null;
   const prefix = nodePath + ' > ';
   if (!selectedPath.startsWith(prefix)) return null;
-  const remainder = selectedPath.slice(prefix.length);
-  const nextSegment = remainder.split(' > ')[0];
+  const nextSegment = selectedPath.slice(prefix.length).split(' > ')[0];
   return `${prefix}${nextSegment}`;
 }
 
 /**
- * Returns the children list to render for a tree node, with a synthetic node
- * injected when the next ancestor toward `selectedPath` is missing from the
- * loaded pages (happens when a parent has >100 children and the target falls
- * outside the fetched pages).
+ * Inserts a node into a sorted children array by name, preserving sort order.
+ */
+function insertSorted(children: FlatNode[], node: FlatNode): FlatNode[] {
+  const insertAt = children.findIndex((c) => c.name.localeCompare(node.name) > 0);
+  if (insertAt === -1) return [...children, node];
+  return [...children.slice(0, insertAt), node, ...children.slice(insertAt)];
+}
+
+/**
+ * Returns the children list to render, with a synthetic placeholder injected
+ * when the next ancestor toward `selectedPath` is missing from the loaded pages.
  *
- * The injected node is a placeholder that triggers `useChildren` for the real
- * path, allowing the expand cascade to continue past the pagination boundary.
+ * This happens when a parent has >100 children and the target child falls
+ * outside the fetched pages. The injected placeholder triggers `useChildren`
+ * for the real path, allowing the expand cascade to continue past the
+ * pagination boundary.
  */
 export function useInjectedChildren(
   nodePath: string,
@@ -31,24 +43,20 @@ export function useInjectedChildren(
   children: FlatNode[],
   hasData: boolean,
 ): FlatNode[] {
-  const nextPathStepPath =
-    isExpanded && !isLoading && hasData
-      ? getNextPathStep(nodePath, selectedPath)
-      : null;
+  const canInject = isExpanded && !isLoading && hasData;
+  const targetChildPath = canInject ? findChildPathToward(nodePath, selectedPath) : null;
 
-  const injectedPathStep: FlatNode | null =
-    nextPathStepPath && !children.some((c) => c.path === nextPathStepPath)
-      ? {
-          path: nextPathStepPath,
-          name: nextPathStepPath.split(' > ').pop() ?? '',
-          size: 0,
-          hasChildren: nextPathStepPath !== selectedPath,
-        }
-      : null;
+  // If the target child is already in the fetched children, no injection needed.
+  if (!targetChildPath || children.some((c) => c.path === targetChildPath)) {
+    return children;
+  }
 
-  if (!injectedPathStep) return children;
-  const insertAt = children.findIndex((c) => c.name.localeCompare(injectedPathStep.name) > 0);
-  return insertAt === -1
-    ? [...children, injectedPathStep]
-    : [...children.slice(0, insertAt), injectedPathStep, ...children.slice(insertAt)];
+  const syntheticChild: FlatNode = {
+    path: targetChildPath,
+    name: targetChildPath.split(' > ').pop() ?? '',
+    size: 0,
+    hasChildren: targetChildPath !== selectedPath,
+  };
+
+  return insertSorted(children, syntheticChild);
 }
