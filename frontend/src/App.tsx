@@ -1,40 +1,28 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useRoot } from './hooks/useChildren.ts'
 import { useDebounced } from './hooks/useDebounced.ts'
-import { useExpandedPaths } from './hooks/useExpandedPaths.ts'
+import { useTreeStore } from './store/treeStore.ts'
 import TreeExplorer from './components/TreeExplorer.tsx'
-
 import NodeDetail from './components/NodeDetail/index.tsx'
 import SearchResults from './components/SearchResults/index.tsx'
 import type { FlatNode } from './api/client.ts'
 
 function App() {
-  const [selected, setSelected] = useState<FlatNode | null>(null)
   const [searchInput, setSearchInput] = useState('')
-  const [scrollTargetPath, setScrollTargetPath] = useState<string | null>(null)
-  const {
-    expandedPaths,
-    pathsWithDisabledFetch,
-    toggleExpanded,
-    collapseAll,
-    expandToNode,
-    removeFromDisabledFetch,
-  } = useExpandedPaths()
   const debouncedSearch = useDebounced(searchInput, 300)
 
   const { data: rootData } = useRoot()
   const rootSize = rootData?.node.size ?? 0
 
+  const selectedNode = useTreeStore((s) => s.selectedNode)
+  const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
+  const setScrollTargetPath = useTreeStore((s) => s.setScrollTargetPath)
+  const expandToNode = useTreeStore((s) => s.expandToNode)
+
   const isSearching = debouncedSearch.trim().length >= 2
 
-  const clearScrollTarget = useCallback(() => setScrollTargetPath(null), [])
-
-  const handleTreeSelect = useCallback((node: FlatNode) => {
-    setSelected(node)
-  }, [])
-
   function handleSearchSelect(node: FlatNode) {
-    setSelected(node)
+    setSelectedNode(node)
     setSearchInput('')
     setScrollTargetPath(node.path)
     expandToNode(node.path)
@@ -95,24 +83,14 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-[300px] shrink-0 border-r border-border overflow-y-auto bg-surface">
-          <TreeExplorer
-            onSelect={handleTreeSelect}
-            selectedPath={selected?.path ?? null}
-            scrollTargetPath={scrollTargetPath}
-            onScrollComplete={clearScrollTarget}
-            expandedPaths={expandedPaths}
-            toggleExpanded={toggleExpanded}
-            collapseAll={collapseAll}
-            pathsWithDisabledFetch={pathsWithDisabledFetch}
-            removeFromDisabledFetch={removeFromDisabledFetch}
-          />
+          <TreeExplorer />
         </aside>
 
         <main className="flex-1 overflow-y-auto p-6">
           <MainContent
             isSearching={isSearching}
             debouncedSearch={debouncedSearch}
-            selected={selected}
+            selected={selectedNode}
             rootSize={rootSize}
             onSearchSelect={handleSearchSelect}
           />

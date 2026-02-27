@@ -3,19 +3,12 @@ import { memo } from 'react'
 import { useChildren } from '../hooks/useChildren.ts'
 import { mergeExpandedChildren } from '../utils/treeChildren.ts'
 import { useScrollIntoView } from '../hooks/useScrollIntoView.ts'
+import { useTreeStore } from '../store/treeStore.ts'
 import type { FlatNode } from '../api/client.ts'
 
 type Props = {
   node: FlatNode
   depth: number
-  onSelect: (node: FlatNode) => void
-  selectedPath: string | null
-  scrollTargetPath: string | null
-  onScrollComplete: () => void
-  expandedPaths: Set<string>
-  toggleExpanded: (path: string) => void
-  pathsWithDisabledFetch: Set<string>
-  removeFromDisabledFetch: (path: string) => void
 }
 
 /**
@@ -32,47 +25,13 @@ function formatSize(size: number): string {
   return String(size)
 }
 
-export default function TreeNode({
-  node,
-  depth,
-  onSelect,
-  selectedPath,
-  scrollTargetPath,
-  onScrollComplete,
-  expandedPaths,
-  toggleExpanded,
-  pathsWithDisabledFetch,
-  removeFromDisabledFetch,
-}: Props) {
-  const isExpanded = expandedPaths.has(node.path)
-  const isSelected = selectedPath === node.path
+export default function TreeNode({ node, depth }: Props) {
+  const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
 
   return (
     <div>
-      <NodeRow
-        node={node}
-        depth={depth}
-        isSelected={isSelected}
-        isExpanded={isExpanded}
-        scrollTargetPath={scrollTargetPath}
-        onScrollComplete={onScrollComplete}
-        onSelect={onSelect}
-        toggleExpanded={toggleExpanded}
-      />
-      {isExpanded && (
-        <Children
-          node={node}
-          depth={depth}
-          selectedPath={selectedPath}
-          scrollTargetPath={scrollTargetPath}
-          onScrollComplete={onScrollComplete}
-          onSelect={onSelect}
-          expandedPaths={expandedPaths}
-          toggleExpanded={toggleExpanded}
-          pathsWithDisabledFetch={pathsWithDisabledFetch}
-          removeFromDisabledFetch={removeFromDisabledFetch}
-        />
-      )}
+      <NodeRow node={node} depth={depth} />
+      {isExpanded && <Children node={node} depth={depth} />}
     </div>
   )
 }
@@ -80,29 +39,18 @@ export default function TreeNode({
 type ChildrenProps = {
   node: FlatNode
   depth: number
-  selectedPath: string | null
-  scrollTargetPath: string | null
-  onScrollComplete: () => void
-  onSelect: (node: FlatNode) => void
-  expandedPaths: Set<string>
-  toggleExpanded: (path: string) => void
-  pathsWithDisabledFetch: Set<string>
-  removeFromDisabledFetch: (path: string) => void
 }
 
-const Children = memo(function Children({
-  node,
-  depth,
-  selectedPath,
-  scrollTargetPath,
-  onScrollComplete,
-  onSelect,
-  expandedPaths,
-  toggleExpanded,
-  pathsWithDisabledFetch,
-  removeFromDisabledFetch,
-}: ChildrenProps) {
-  const isFetchDisabled = pathsWithDisabledFetch.has(node.path)
+const Children = memo(function Children({ node, depth }: ChildrenProps) {
+  const isFetchDisabled = useTreeStore((s) =>
+    s.pathsWithDisabledFetch.has(node.path),
+  )
+  const expandedPaths = useTreeStore((s) => s.expandedPaths)
+  const selectedPath = useTreeStore((s) => s.selectedNode?.path ?? null)
+  const removeFromDisabledFetch = useTreeStore(
+    (s) => s.removeFromDisabledFetch,
+  )
+
   const {
     isLoading,
     fetchNextPage,
@@ -125,19 +73,7 @@ const Children = memo(function Children({
       {isLoading && <LoadingRow depth={childDepth} />}
 
       {displayedChildren.map((child) => (
-        <TreeNode
-          key={child.path}
-          node={child}
-          depth={childDepth}
-          onSelect={onSelect}
-          selectedPath={selectedPath}
-          scrollTargetPath={scrollTargetPath}
-          onScrollComplete={onScrollComplete}
-          expandedPaths={expandedPaths}
-          toggleExpanded={toggleExpanded}
-          pathsWithDisabledFetch={pathsWithDisabledFetch}
-          removeFromDisabledFetch={removeFromDisabledFetch}
-        />
+        <TreeNode key={child.path} node={child} depth={childDepth} />
       ))}
 
       {!isLoading && !isFetchDisabled && displayedChildren.length === 0 && (
@@ -165,27 +101,19 @@ const Children = memo(function Children({
 type NodeRowProps = {
   node: FlatNode
   depth: number
-  isSelected: boolean
-  isExpanded: boolean
-  scrollTargetPath: string | null
-  onScrollComplete: () => void
-  onSelect: (node: FlatNode) => void
-  toggleExpanded: (path: string) => void
 }
 
-function NodeRow({
-  node,
-  depth,
-  isSelected,
-  isExpanded,
-  scrollTargetPath,
-  onScrollComplete,
-  onSelect,
-  toggleExpanded,
-}: NodeRowProps) {
+function NodeRow({ node, depth }: NodeRowProps) {
+  const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
+  const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
+  const scrollTargetPath = useTreeStore((s) => s.scrollTargetPath)
+  const clearScrollTargetPath = useTreeStore((s) => s.clearScrollTargetPath)
+  const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
+  const toggleExpanded = useTreeStore((s) => s.toggleExpanded)
+
   const canExpand = node.hasChildren ?? false
   const paddingLeft = indentPadding(depth)
-  const ref = useScrollIntoView(node.path, scrollTargetPath, onScrollComplete)
+  const ref = useScrollIntoView(node.path, scrollTargetPath, clearScrollTargetPath)
 
   function handleChevronClick(e: MouseEvent) {
     e.stopPropagation()
@@ -193,7 +121,7 @@ function NodeRow({
   }
 
   function handleRowClick() {
-    if (!isSelected) onSelect(node)
+    if (!isSelected) setSelectedNode(node)
     if (canExpand) toggleExpanded(node.path)
   }
 
