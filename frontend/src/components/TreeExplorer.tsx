@@ -1,32 +1,17 @@
 import { useRoot } from '../hooks/useChildren.ts'
+import { useTreeStore } from '../store/treeStore.ts'
 import TreeNode from './TreeNode.tsx'
 import type { FlatNode } from '../api/client.ts'
 
-type Props = {
-  onSelect: (node: FlatNode) => void
-  selectedPath: string | null
-  scrollTargetPath: string | null
-  onScrollComplete: () => void
-  expandedPaths: Set<string>
-  toggleExpanded: (path: string) => void
-  collapseAll: () => void
-  pathsWithDisabledFetch: Set<string>
-  removeFromDisabledFetch: (path: string) => void
-}
+function RootNode({ node }: { node: FlatNode }) {
+  const selectedNode = useTreeStore((s) => s.selectedNode)
+  const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
+  const isSelected = selectedNode?.path === node.path
 
-function RootNode({
-  node,
-  isSelected,
-  onSelect,
-}: {
-  node: FlatNode
-  isSelected: boolean
-  onSelect: (node: FlatNode) => void
-}) {
   return (
     <div
       className={`flex items-center gap-2 px-3 py-2 cursor-pointer border-b border-border hover:bg-surface-hover transition-colors ${isSelected ? 'bg-accent-dim' : ''}`}
-      onClick={() => onSelect(node)}
+      onClick={() => setSelectedNode(node)}
       title={node.path}
     >
       <span className="text-accent text-sm">◈</span>
@@ -40,12 +25,14 @@ function RootNode({
   )
 }
 
-function TreeToolbar({ onCollapseAll }: { onCollapseAll: () => void }) {
+function TreeToolbar() {
+  const collapseAll = useTreeStore((s) => s.collapseAll)
+
   return (
     <div className="flex items-center justify-end px-3 py-1 border-b border-border bg-surface-2">
       <button
         className="flex items-center gap-1 text-[11px] text-text-3 hover:text-text-2 transition-colors cursor-pointer"
-        onClick={onCollapseAll}
+        onClick={collapseAll}
         title="Collapse all expanded nodes"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -62,17 +49,7 @@ function TreeToolbar({ onCollapseAll }: { onCollapseAll: () => void }) {
   )
 }
 
-export default function TreeExplorer({
-  onSelect,
-  selectedPath,
-  scrollTargetPath,
-  onScrollComplete,
-  expandedPaths,
-  toggleExpanded,
-  collapseAll,
-  pathsWithDisabledFetch,
-  removeFromDisabledFetch,
-}: Props) {
+export default function TreeExplorer() {
   const { data, isLoading, error } = useRoot()
 
   if (isLoading) {
@@ -94,31 +71,15 @@ export default function TreeExplorer({
 
   return (
     <div>
-      <TreeToolbar onCollapseAll={collapseAll} />
+      <TreeToolbar />
 
       {/* Root node — always visible, acts as tree header */}
-      <RootNode
-        node={data.node}
-        isSelected={selectedPath === data.node.path}
-        onSelect={onSelect}
-      />
+      <RootNode node={data.node} />
 
       {/* First-level children — pre-loaded from useRoot */}
       <div>
         {data.children.map((child) => (
-          <TreeNode
-            key={child.path}
-            node={child}
-            depth={1}
-            onSelect={onSelect}
-            selectedPath={selectedPath}
-            scrollTargetPath={scrollTargetPath}
-            onScrollComplete={onScrollComplete}
-            expandedPaths={expandedPaths}
-            toggleExpanded={toggleExpanded}
-            pathsWithDisabledFetch={pathsWithDisabledFetch}
-            removeFromDisabledFetch={removeFromDisabledFetch}
-          />
+          <TreeNode key={child.path} node={child} depth={1} />
         ))}
       </div>
     </div>
