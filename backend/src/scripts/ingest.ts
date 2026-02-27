@@ -10,6 +10,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const XML_URL =
   'https://raw.githubusercontent.com/tzutalin/ImageNet_Utils/master/detection_eval_tools/structure_released.xml'
 
+// ── XML shape (as emitted by fast-xml-parser) ───────────────
+// All attribute fields are optional: the XML could be malformed.
+// The `assert` calls below act as runtime guards for required fields.
+interface RawSynset {
+  '@_wnid'?: string
+  '@_words'?: string
+  '@_gloss'?: string
+  synset?: RawSynset[]
+}
+
+interface RawXmlDoc {
+  ImageNetStructure?: {
+    synset?: RawSynset[]
+  }
+}
+
 type FlatRecord = {
   path: string
   name: string
@@ -66,20 +82,18 @@ function parseXML(xmlContent: string): FlatRecord[] {
     isArray: (name) => name === 'synset',
   })
 
-  const doc = parser.parse(xmlContent) as Record<string, unknown>
+  // Single boundary cast: parser returns `any`; we assert the shape we expect.
+  const doc = parser.parse(xmlContent) as RawXmlDoc
   const records: FlatRecord[] = []
 
-  const structure = doc['ImageNetStructure'] as
-    | Record<string, unknown>
-    | undefined
-  const topSynsets = structure?.['synset'] as unknown[] | undefined
+  const topSynsets = doc.ImageNetStructure?.synset
 
   if (!topSynsets || topSynsets.length === 0) {
     throw new Error('Could not find root synset — unexpected XML structure')
   }
 
-  const rootSynset = topSynsets[0] as Record<string, unknown>
-  const rootName = rootSynset['@_words'] as string
+  const rootSynset = topSynsets[0]
+  const rootName = rootSynset['@_words']
 
   assert(
     rootName !== undefined,
@@ -88,7 +102,7 @@ function parseXML(xmlContent: string): FlatRecord[] {
 
   // Traverse children first to get the descendant count for the root
   const rootChildrenCount = traverseSynsets(
-    (rootSynset['synset'] as unknown[] | undefined) ?? [],
+    rootSynset.synset ?? [],
     rootName,
     1,
     records,
@@ -116,20 +130,19 @@ function parseXML(xmlContent: string): FlatRecord[] {
  * top-down order for the buildTree algorithm.
  */
 function traverseSynsets(
-  synsets: unknown[],
+  synsets: RawSynset[],
   parentPath: string,
   depth: number,
   records: FlatRecord[],
 ): number {
   let totalForParent = 0
 
-  for (const item of synsets) {
-    const synset = item as Record<string, unknown>
-    const words = synset['@_words'] as string | undefined
+  for (const synset of synsets) {
+    const words = synset['@_words']
     assert(words !== undefined, 'XML is missing data.')
 
     const currentPath = `${parentPath} > ${words}`
-    const children = synset['synset'] as unknown[] | undefined
+    const children = synset.synset
 
     const childDescendants = children
       ? traverseSynsets(children, currentPath, depth + 1, records)
