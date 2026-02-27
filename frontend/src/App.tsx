@@ -11,7 +11,7 @@ function App() {
   const [selected, setSelected] = useState<FlatNode | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [scrollTargetPath, setScrollTargetPath] = useState<string | null>(null);
-  const { expandedPaths, toggleExpanded, collapseAll, expandToNode } = useExpandedPaths();
+  const { expandedPaths, navTargetPaths, toggleExpanded, collapseAll, expandToNode, clearNavTarget } = useExpandedPaths();
   const debouncedSearch = useDebounced(searchInput, 300);
 
   const { data: rootData } = useRoot();
@@ -20,6 +20,11 @@ function App() {
   const isSearching = debouncedSearch.trim().length >= 2;
 
   const clearScrollTarget = useCallback(() => setScrollTargetPath(null), []);
+
+  const handleTreeSelect = useCallback((node: FlatNode) => {
+    setSelected(node);
+    clearNavTarget();
+  }, [clearNavTarget]);
 
   function handleSearchSelect(node: FlatNode) {
     setSelected(node);
@@ -64,11 +69,12 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-[300px] shrink-0 border-r border-border overflow-y-auto bg-surface">
           <TreeExplorer
-            onSelect={setSelected}
+            onSelect={handleTreeSelect}
             selectedPath={selected?.path ?? null}
             scrollTargetPath={scrollTargetPath}
             onScrollComplete={clearScrollTarget}
             expandedPaths={expandedPaths}
+            navTargetPaths={navTargetPaths}
             toggleExpanded={toggleExpanded}
             collapseAll={collapseAll}
           />

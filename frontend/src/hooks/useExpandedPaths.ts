@@ -1,20 +1,8 @@
 import { useState, useCallback } from 'react';
 
-/** Returns the paths of all ancestors that must be expanded to make `path` visible. */
-function getAncestorsToExpand(path: string): string[] {
-  const parts = path.split(' > ');
-  const toExpand: string[] = [];
-  // parts[0] = root (always visible); start from depth-1 nodes (index 1)
-  // We need to expand each ancestor so its children become visible.
-  // e.g. path = "fall11 > A > B > C" → expand "fall11 > A" and "fall11 > A > B"
-  for (let i = 2; i < parts.length; i++) {
-    toExpand.push(parts.slice(0, i).join(' > '));
-  }
-  return toExpand;
-}
-
 export function useExpandedPaths() {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [navTargetPaths, setNavTargetPaths] = useState<string[]>([]);
 
   const toggleExpanded = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -27,19 +15,17 @@ export function useExpandedPaths() {
 
   const collapseAll = useCallback(() => {
     setExpandedPaths(new Set());
+    setNavTargetPaths([]);
   }, []);
 
-  /** Expand all ancestors of `path` so the node becomes visible in the tree. */
+  /** Append a new nav target — previous targets remain visible, no sibling fetches triggered. */
   const expandToNode = useCallback((path: string) => {
-    const ancestors = getAncestorsToExpand(path);
-    if (ancestors.length > 0) {
-      setExpandedPaths((prev) => {
-        const next = new Set(prev);
-        ancestors.forEach((p) => next.add(p));
-        return next;
-      });
-    }
+    setNavTargetPaths((prev) => [...prev, path]);
   }, []);
 
-  return { expandedPaths, toggleExpanded, collapseAll, expandToNode };
+  const clearNavTarget = useCallback(() => {
+    setNavTargetPaths([]);
+  }, []);
+
+  return { expandedPaths, navTargetPaths, toggleExpanded, collapseAll, expandToNode, clearNavTarget };
 }
