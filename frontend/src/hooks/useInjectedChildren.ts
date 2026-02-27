@@ -46,5 +46,9 @@ export function useInjectedChildren(
         }
       : null;
 
-  return injectedPathStep ? [injectedPathStep, ...children] : children;
+  if (!injectedPathStep) return children;
+  const insertAt = children.findIndex((c) => c.name.localeCompare(injectedPathStep.name) > 0);
+  return insertAt === -1
+    ? [...children, injectedPathStep]
+    : [...children.slice(0, insertAt), injectedPathStep, ...children.slice(insertAt)];
 }
