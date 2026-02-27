@@ -25,11 +25,11 @@ export function mergeExpandedChildren(
 ): FlatNode[] {
   let result = fetchedChildren
   const prefix = nodePath + ' > '
+  const fetchedPaths = new Set(fetchedChildren.map((c) => c.path))
   for (const expandedPath of expandedPaths) {
     const isDescendant = expandedPath.startsWith(prefix)
     const isDirectChild = !expandedPath.slice(prefix.length).includes(' > ')
-    const isAlreadyFetched = result.some((c) => c.path === expandedPath)
-    if (isDescendant && isDirectChild && !isAlreadyFetched) {
+    if (isDescendant && isDirectChild && !fetchedPaths.has(expandedPath)) {
       result = insertSorted(result, {
         path: expandedPath,
         name: expandedPath.split(' > ').pop() ?? '',
