@@ -1,31 +1,32 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react'
 
 export function useExpandedPaths() {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [navTargetPaths, setNavTargetPaths] = useState<string[]>([]);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   const toggleExpanded = useCallback((path: string) => {
     setExpandedPaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  }, []);
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }, [])
 
   const collapseAll = useCallback(() => {
-    setExpandedPaths(new Set());
-    setNavTargetPaths([]);
-  }, []);
+    setExpandedPaths(new Set())
+  }, [])
 
-  /** Add a path to the nav targets list so the tree reveals the ancestor chain without fetching siblings. */
+  /** Expands all ancestor paths so the target node becomes visible in the tree. */
   const expandToNode = useCallback((path: string) => {
-    setNavTargetPaths((prev) => [...prev, path]);
-  }, []);
+    setExpandedPaths((prev) => {
+      const next = new Set(prev)
+      const segments = path.split(' > ')
+      for (let i = 1; i < segments.length; i++) {
+        next.add(segments.slice(0, i).join(' > '))
+      }
+      return next
+    })
+  }, [])
 
-  const clearNavTarget = useCallback(() => {
-    setNavTargetPaths([]);
-  }, []);
-
-  return { expandedPaths, navTargetPaths, toggleExpanded, collapseAll, expandToNode, clearNavTarget };
+  return { expandedPaths, toggleExpanded, collapseAll, expandToNode }
 }

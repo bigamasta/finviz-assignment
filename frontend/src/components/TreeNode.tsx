@@ -12,7 +12,6 @@ type Props = {
   scrollTargetPath: string | null
   onScrollComplete: () => void
   expandedPaths: Set<string>
-  navTargetPaths: string[]
   toggleExpanded: (path: string) => void
 }
 
@@ -38,14 +37,9 @@ export default function TreeNode({
   scrollTargetPath,
   onScrollComplete,
   expandedPaths,
-  navTargetPaths,
   toggleExpanded,
 }: Props) {
-  const isManualExpanded = expandedPaths.has(node.path)
-  const isNavExpanded =
-    !isManualExpanded &&
-    navTargetPaths.some((t) => t.startsWith(node.path + ' > '))
-  const isExpanded = isManualExpanded || isNavExpanded
+  const isExpanded = expandedPaths.has(node.path)
   const isSelected = selectedPath === node.path
 
   return (
@@ -69,8 +63,6 @@ export default function TreeNode({
           onScrollComplete={onScrollComplete}
           onSelect={onSelect}
           expandedPaths={expandedPaths}
-          navTargetPaths={navTargetPaths}
-          isNavExpanded={isNavExpanded}
           toggleExpanded={toggleExpanded}
         />
       )}
@@ -86,8 +78,6 @@ type ChildrenProps = {
   onScrollComplete: () => void
   onSelect: (node: FlatNode) => void
   expandedPaths: Set<string>
-  navTargetPaths: string[]
-  isNavExpanded: boolean
   toggleExpanded: (path: string) => void
 }
 
@@ -99,8 +89,6 @@ const Children = memo(function Children({
   onScrollComplete,
   onSelect,
   expandedPaths,
-  navTargetPaths,
-  isNavExpanded,
   toggleExpanded,
 }: ChildrenProps) {
   const {
@@ -109,7 +97,7 @@ const Children = memo(function Children({
     hasNextPage,
     isFetchingNextPage,
     displayChildren,
-  } = useChildren(node.path, selectedPath, true, isNavExpanded, navTargetPaths)
+  } = useChildren(node.path, selectedPath, true)
   const childDepth = depth + 1
 
   return (
@@ -126,7 +114,6 @@ const Children = memo(function Children({
           scrollTargetPath={scrollTargetPath}
           onScrollComplete={onScrollComplete}
           expandedPaths={expandedPaths}
-          navTargetPaths={navTargetPaths}
           toggleExpanded={toggleExpanded}
         />
       ))}
@@ -135,14 +122,7 @@ const Children = memo(function Children({
         <EmptyChildrenRow depth={childDepth} />
       )}
 
-      {isNavExpanded && (
-        <LoadMoreRow
-          depth={childDepth}
-          isLoading={false}
-          onLoadMore={() => toggleExpanded(node.path)}
-        />
-      )}
-      {!isNavExpanded && hasNextPage && (
+      {hasNextPage && (
         <LoadMoreRow
           depth={childDepth}
           isLoading={isFetchingNextPage}

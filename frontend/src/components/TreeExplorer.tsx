@@ -8,7 +8,6 @@ type Props = {
   scrollTargetPath: string | null
   onScrollComplete: () => void
   expandedPaths: Set<string>
-  navTargetPaths: string[]
   toggleExpanded: (path: string) => void
   collapseAll: () => void
 }
@@ -67,7 +66,6 @@ export default function TreeExplorer({
   scrollTargetPath,
   onScrollComplete,
   expandedPaths,
-  navTargetPaths,
   toggleExpanded,
   collapseAll,
 }: Props) {
@@ -113,7 +111,6 @@ export default function TreeExplorer({
             scrollTargetPath={scrollTargetPath}
             onScrollComplete={onScrollComplete}
             expandedPaths={expandedPaths}
-            navTargetPaths={navTargetPaths}
             toggleExpanded={toggleExpanded}
           />
         ))}
