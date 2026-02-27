@@ -22,7 +22,7 @@ function App() {
   const debouncedSearch = useDebounced(searchInput, 300)
 
   const { data: rootData } = useRoot()
-  const rootSize = rootData?.node.size ?? 60941
+  const rootSize = rootData?.node.size ?? 0
 
   const isSearching = debouncedSearch.trim().length >= 2
 
@@ -69,7 +69,13 @@ function App() {
         <div className="relative ml-auto flex items-center">
           <span className="absolute left-3 text-text-3 pointer-events-none">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5" />
+              <circle
+                cx="6.5"
+                cy="6.5"
+                r="5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
               <path
                 d="M10.5 10.5L14 14"
                 stroke="currentColor"
@@ -132,7 +138,13 @@ function MainContent({
   onSearchSelect: (node: FlatNode) => void
 }) {
   if (isSearching) {
-    return <SearchResults key={debouncedSearch} query={debouncedSearch} onSelect={onSearchSelect} />
+    return (
+      <SearchResults
+        key={debouncedSearch}
+        query={debouncedSearch}
+        onSelect={onSearchSelect}
+      />
+    )
   }
   if (selected) {
     return <NodeDetail node={selected} rootSize={rootSize} />
@@ -145,7 +157,11 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center h-full gap-3 text-text-3">
       <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M3 7l9-4 9 4v10l-9 4-9-4V7z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
           <path
             d="M3 7l9 4m0 0l9-4m-9 4v10"
             stroke="currentColor"
