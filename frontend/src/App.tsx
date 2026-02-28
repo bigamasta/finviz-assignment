@@ -27,7 +27,7 @@ function App() {
       setScrollTargetPath(node.path)
       expandToNode(node.path)
     },
-    [setSelectedNode, setSearchInput, setScrollTargetPath, expandToNode],
+    [setSelectedNode, setScrollTargetPath, expandToNode],
   )
 
   return (
@@ -84,7 +84,8 @@ function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-[300px] shrink-0 border-r border-border overflow-y-auto bg-surface">
+        {/* overflow-hidden — VirtualTree owns scroll internally */}
+        <aside className="w-[300px] shrink-0 border-r border-border overflow-hidden bg-surface">
           <TreeExplorer />
         </aside>
 

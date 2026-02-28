@@ -3,7 +3,12 @@ import type { FlatNode } from '../api/client.ts'
 
 type TreeState = {
   expandedPaths: Set<string>
-  pathsWithDisabledFetch: Set<string>
+  // Tracks paths added via expandToNode. Serves two purposes:
+  //   1. fetch disabled  — QueryKeeper won't auto-fetch while path is here
+  //   2. stub survival   — synthetic stubs remain visible even after collapse
+  // Removed on manual expand (enabling fetch) or "Load" click.
+  // Never removed on collapse — only cleared by collapseAll.
+  syntheticPaths: Set<string>
   selectedNode: FlatNode | null
   scrollTargetPath: string | null
 }
@@ -20,57 +25,67 @@ type TreeActions = {
 
 export const useTreeStore = create<TreeState & TreeActions>((set) => ({
   expandedPaths: new Set(),
-  pathsWithDisabledFetch: new Set(),
+  syntheticPaths: new Set(),
   selectedNode: null,
   scrollTargetPath: null,
 
   toggleExpanded: (path) =>
     set((state) => {
       const nextExpanded = new Set(state.expandedPaths)
-      const nextDisabled = new Set(state.pathsWithDisabledFetch)
+
       if (nextExpanded.has(path)) {
-        // Collapsing: remove node and all its descendants from disabled fetch
+        // Collapse: remove from expandedPaths only.
+        // syntheticPaths is NOT touched — stubs survive collapse.
         nextExpanded.delete(path)
-        for (const p of nextDisabled) {
-          if (p.startsWith(path + ' > ')) nextDisabled.delete(p)
+        for (const p of nextExpanded) {
+          if (p.startsWith(path + ' > ')) nextExpanded.delete(p)
         }
+        const nextScroll =
+          state.scrollTargetPath === path ||
+          (state.scrollTargetPath?.startsWith(path + ' > ') ?? false)
+            ? null
+            : state.scrollTargetPath
+        return { expandedPaths: nextExpanded, scrollTargetPath: nextScroll }
       } else {
-        // Manual expand: enable fetch for this path
-        nextExpanded.add(path)
-        nextDisabled.delete(path)
+        // Manual expand: remove from syntheticPaths to enable fetch
+        const nextSynthetic = new Set(state.syntheticPaths)
+        nextSynthetic.delete(path)
+        return { expandedPaths: nextExpanded.add(path), syntheticPaths: nextSynthetic }
       }
-      return { expandedPaths: nextExpanded, pathsWithDisabledFetch: nextDisabled }
     }),
 
   collapseAll: () =>
-    set({ expandedPaths: new Set(), pathsWithDisabledFetch: new Set() }),
+    set({
+      expandedPaths: new Set(),
+      syntheticPaths: new Set(),
+      scrollTargetPath: null,
+    }),
 
   expandToNode: (path) =>
     set((state) => {
       const nextExpanded = new Set(state.expandedPaths)
-      const nextDisabled = new Set(state.pathsWithDisabledFetch)
+      const nextSynthetic = new Set(state.syntheticPaths)
       const segments = path.split(' > ')
       for (let i = 1; i < segments.length; i++) {
         const ancestor = segments.slice(0, i).join(' > ')
         if (!state.expandedPaths.has(ancestor)) {
-          nextDisabled.add(ancestor)
+          nextSynthetic.add(ancestor)
         }
         nextExpanded.add(ancestor)
       }
-      // Track the leaf itself so it stays visible across navigations
-      // (the merge loop in Children relies on it being in expandedPaths)
       if (!state.expandedPaths.has(path)) {
-        nextDisabled.add(path)
+        nextSynthetic.add(path)
       }
       nextExpanded.add(path)
-      return { expandedPaths: nextExpanded, pathsWithDisabledFetch: nextDisabled }
+      return { expandedPaths: nextExpanded, syntheticPaths: nextSynthetic }
     }),
 
+  // Called when user clicks "Load" — removes from syntheticPaths to enable fetch
   removeFromDisabledFetch: (path) =>
     set((state) => {
-      const nextDisabled = new Set(state.pathsWithDisabledFetch)
-      nextDisabled.delete(path)
-      return { pathsWithDisabledFetch: nextDisabled }
+      const nextSynthetic = new Set(state.syntheticPaths)
+      nextSynthetic.delete(path)
+      return { syntheticPaths: nextSynthetic }
     }),
 
   setSelectedNode: (node) => set({ selectedNode: node }),
