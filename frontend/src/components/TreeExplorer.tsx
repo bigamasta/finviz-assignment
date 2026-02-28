@@ -1,8 +1,8 @@
+import { memo } from 'react'
 import { useRoot } from '../hooks/useChildren.ts'
 import { useTreeStore } from '../store/treeStore.ts'
-import { TreeNode } from './TreeNode.tsx'
+import { VirtualTree } from './VirtualTree/index.tsx'
 import type { FlatNode } from '../api/client.ts'
-import { memo } from 'react'
 
 function RootNode({ node }: { node: FlatNode }) {
   const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
@@ -70,17 +70,12 @@ export const TreeExplorer = memo(function TreeExplorer() {
   }
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <TreeToolbar />
-
-      {/* Root node — always visible, acts as tree header */}
       <RootNode node={data.node} />
-
-      {/* First-level children — pre-loaded from useRoot */}
-      <div>
-        {data.children.map((child) => (
-          <TreeNode key={child.path} node={child} depth={1} />
-        ))}
+      {/* VirtualTree fills the remaining height and owns its own scroll */}
+      <div className="flex-1 min-h-0">
+        <VirtualTree firstLevelChildren={data.children} />
       </div>
     </div>
   )
