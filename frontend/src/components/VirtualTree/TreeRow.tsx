@@ -1,15 +1,8 @@
 import type { MouseEvent } from 'react'
 import { memo } from 'react'
-import { useChildren } from '../hooks/useChildren.ts'
-import { mergeExpandedChildren } from '../utils/treeChildren.ts'
-import { useScrollIntoView } from '../hooks/useScrollIntoView.ts'
-import { useTreeStore } from '../store/treeStore.ts'
-import type { FlatNode } from '../api/client.ts'
-
-type Props = {
-  node: FlatNode
-  depth: number
-}
+import { useTreeStore } from '../../store/treeStore.ts'
+import { useQueryKeeperRegistry } from '../../context/QueryKeeperContext.ts'
+import type { VisibleRow } from '../../types/rows.ts'
 
 /**
  * Calculates left padding for tree indentation at a given depth.
@@ -25,93 +18,29 @@ function formatSize(size: number): string {
   return String(size)
 }
 
-export const TreeNode = memo(function TreeNode({ node, depth }: Props) {
-  const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
-
-  return (
-    <div>
-      <NodeRow node={node} depth={depth} />
-      {isExpanded && <Children node={node} depth={depth} />}
-    </div>
-  )
-})
-
-type ChildrenProps = {
-  node: FlatNode
-  depth: number
+type Props = {
+  row: VisibleRow
 }
 
-const Children = memo(function Children({ node, depth }: ChildrenProps) {
-  const isFetchDisabled = useTreeStore((s) =>
-    s.pathsWithDisabledFetch.has(node.path),
-  )
-  const expandedPaths = useTreeStore((s) => s.expandedPaths)
-  const selectedPath = useTreeStore((s) => s.selectedNode?.path ?? null)
-  const removeFromDisabledFetch = useTreeStore((s) => s.removeFromDisabledFetch)
-
-  const {
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchedChildren,
-  } = useChildren(node.path, isFetchDisabled)
-
-  const displayedChildren = mergeExpandedChildren(
-    fetchedChildren,
-    expandedPaths,
-    node.path,
-    selectedPath,
-  )
-
-  const childDepth = depth + 1
-
-  return (
-    <div className="animate-fade-slide-in">
-      {isLoading && <LoadingRow depth={childDepth} />}
-
-      {displayedChildren.map((child) => (
-        <TreeNode key={child.path} node={child} depth={childDepth} />
-      ))}
-
-      {isFetchDisabled && (
-        <LoadRow
-          depth={childDepth}
-          onLoad={() => removeFromDisabledFetch(node.path)}
-        />
-      )}
-
-      {hasNextPage && (
-        <LoadMoreRow
-          depth={childDepth}
-          isLoading={isFetchingNextPage}
-          onLoadMore={() => void fetchNextPage()}
-        />
-      )}
-    </div>
-  )
+export const TreeRow = memo(function TreeRow({ row }: Props) {
+  if (row.kind === 'node') return <NodeRow row={row} />
+  if (row.kind === 'loading') return <LoadingRow row={row} />
+  if (row.kind === 'load') return <LoadRow row={row} />
+  return <LoadMoreRow row={row} />
 })
 
-type NodeRowProps = {
-  node: FlatNode
-  depth: number
-}
-
-const NodeRow = memo(function NodeRow({ node, depth }: NodeRowProps) {
+const NodeRow = memo(function NodeRow({
+  row,
+}: {
+  row: Extract<VisibleRow, { kind: 'node' }>
+}) {
+  const { node, depth, isExpanded } = row
   const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
-  const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
-  const scrollTargetPath = useTreeStore((s) => s.scrollTargetPath)
-  const clearScrollTargetPath = useTreeStore((s) => s.clearScrollTargetPath)
   const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
   const toggleExpanded = useTreeStore((s) => s.toggleExpanded)
 
   const canExpand = node.hasChildren ?? false
   const paddingLeft = indentPadding(depth)
-  const ref = useScrollIntoView(
-    node.path,
-    scrollTargetPath,
-    clearScrollTargetPath,
-  )
 
   function handleChevronClick(e: MouseEvent) {
     e.stopPropagation()
@@ -125,7 +54,6 @@ const NodeRow = memo(function NodeRow({ node, depth }: NodeRowProps) {
 
   return (
     <div
-      ref={ref}
       className={`flex items-center gap-1 pr-3 py-[5px] cursor-pointer hover:bg-surface-hover transition-colors text-sm ${isSelected ? 'bg-accent-dim!' : ''}`}
       style={{ paddingLeft }}
       onClick={handleRowClick}
@@ -159,8 +87,12 @@ const NodeRow = memo(function NodeRow({ node, depth }: NodeRowProps) {
   )
 })
 
-function LoadingRow({ depth }: { depth: number }) {
-  const paddingLeft = indentPadding(depth, true)
+function LoadingRow({
+  row,
+}: {
+  row: Extract<VisibleRow, { kind: 'loading' }>
+}) {
+  const paddingLeft = indentPadding(row.depth, true)
   return (
     <div
       className="flex items-center gap-2 py-1.5 text-xs text-text-3"
@@ -172,13 +104,16 @@ function LoadingRow({ depth }: { depth: number }) {
   )
 }
 
-function LoadRow({ depth, onLoad }: { depth: number; onLoad: () => void }) {
-  const paddingLeft = indentPadding(depth, true)
+function LoadRow({ row }: { row: Extract<VisibleRow, { kind: 'load' }> }) {
+  const removeFromDisabledFetch = useTreeStore(
+    (s) => s.removeFromDisabledFetch,
+  )
+  const paddingLeft = indentPadding(row.depth, true)
   return (
     <button
       className="flex items-center gap-1.5 py-1.5 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer bg-transparent border-none w-full text-left"
       style={{ paddingLeft }}
-      onClick={onLoad}
+      onClick={() => removeFromDisabledFetch(row.parentPath)}
     >
       <svg className="w-3 h-3 shrink-0" viewBox="0 0 12 12" fill="none">
         <path
@@ -194,20 +129,19 @@ function LoadRow({ depth, onLoad }: { depth: number; onLoad: () => void }) {
 }
 
 function LoadMoreRow({
-  depth,
-  isLoading,
-  onLoadMore,
+  row,
 }: {
-  depth: number
-  isLoading: boolean
-  onLoadMore: () => void
+  row: Extract<VisibleRow, { kind: 'load-more' }>
 }) {
-  const paddingLeft = indentPadding(depth, true)
+  const registry = useQueryKeeperRegistry()
+  const paddingLeft = indentPadding(row.depth, true)
+  const isLoading = row.isFetchingNextPage
+
   return (
     <button
       className="flex items-center gap-1.5 py-1.5 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed w-full text-left"
       style={{ paddingLeft }}
-      onClick={onLoadMore}
+      onClick={() => registry.fetchNextPage(row.parentPath)}
       disabled={isLoading}
     >
       {isLoading ? (
