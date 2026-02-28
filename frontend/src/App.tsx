@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRoot } from './hooks/useChildren.ts'
 import { useDebounced } from './hooks/useDebounced.ts'
 import { useTreeStore } from './store/treeStore.ts'
-import TreeExplorer from './components/TreeExplorer.tsx'
+import { TreeExplorer } from './components/TreeExplorer.tsx'
 import NodeDetail from './components/NodeDetail/index.tsx'
 import SearchResults from './components/SearchResults/index.tsx'
 import type { FlatNode } from './api/client.ts'
@@ -14,19 +14,21 @@ function App() {
   const { data: rootData } = useRoot()
   const rootSize = rootData?.node.size ?? 0
 
-  const selectedNode = useTreeStore((s) => s.selectedNode)
   const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
   const setScrollTargetPath = useTreeStore((s) => s.setScrollTargetPath)
   const expandToNode = useTreeStore((s) => s.expandToNode)
 
   const isSearching = debouncedSearch.trim().length >= 2
 
-  function handleSearchSelect(node: FlatNode) {
-    setSelectedNode(node)
-    setSearchInput('')
-    setScrollTargetPath(node.path)
-    expandToNode(node.path)
-  }
+  const handleSearchSelect = useCallback(
+    (node: FlatNode) => {
+      setSelectedNode(node)
+      setSearchInput('')
+      setScrollTargetPath(node.path)
+      expandToNode(node.path)
+    },
+    [setSelectedNode, setSearchInput, setScrollTargetPath, expandToNode],
+  )
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -90,7 +92,6 @@ function App() {
           <MainContent
             isSearching={isSearching}
             debouncedSearch={debouncedSearch}
-            selected={selectedNode}
             rootSize={rootSize}
             onSearchSelect={handleSearchSelect}
           />
@@ -103,16 +104,16 @@ function App() {
 function MainContent({
   isSearching,
   debouncedSearch,
-  selected,
   rootSize,
   onSearchSelect,
 }: {
   isSearching: boolean
   debouncedSearch: string
-  selected: FlatNode | null
   rootSize: number
   onSearchSelect: (node: FlatNode) => void
 }) {
+  const selectedNode = useTreeStore((s) => s.selectedNode)
+
   if (isSearching) {
     return (
       <SearchResults
@@ -122,8 +123,8 @@ function MainContent({
       />
     )
   }
-  if (selected) {
-    return <NodeDetail node={selected} rootSize={rootSize} />
+  if (selectedNode) {
+    return <NodeDetail node={selectedNode} rootSize={rootSize} />
   }
   return <EmptyState />
 }

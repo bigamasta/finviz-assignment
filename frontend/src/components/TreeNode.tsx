@@ -25,7 +25,7 @@ function formatSize(size: number): string {
   return String(size)
 }
 
-export default function TreeNode({ node, depth }: Props) {
+export const TreeNode = memo(function TreeNode({ node, depth }: Props) {
   const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
 
   return (
@@ -34,7 +34,7 @@ export default function TreeNode({ node, depth }: Props) {
       {isExpanded && <Children node={node} depth={depth} />}
     </div>
   )
-}
+})
 
 type ChildrenProps = {
   node: FlatNode
@@ -47,9 +47,7 @@ const Children = memo(function Children({ node, depth }: ChildrenProps) {
   )
   const expandedPaths = useTreeStore((s) => s.expandedPaths)
   const selectedPath = useTreeStore((s) => s.selectedNode?.path ?? null)
-  const removeFromDisabledFetch = useTreeStore(
-    (s) => s.removeFromDisabledFetch,
-  )
+  const removeFromDisabledFetch = useTreeStore((s) => s.removeFromDisabledFetch)
 
   const {
     isLoading,
@@ -99,7 +97,7 @@ type NodeRowProps = {
   depth: number
 }
 
-function NodeRow({ node, depth }: NodeRowProps) {
+const NodeRow = memo(function NodeRow({ node, depth }: NodeRowProps) {
   const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
   const isExpanded = useTreeStore((s) => s.expandedPaths.has(node.path))
   const scrollTargetPath = useTreeStore((s) => s.scrollTargetPath)
@@ -109,7 +107,11 @@ function NodeRow({ node, depth }: NodeRowProps) {
 
   const canExpand = node.hasChildren ?? false
   const paddingLeft = indentPadding(depth)
-  const ref = useScrollIntoView(node.path, scrollTargetPath, clearScrollTargetPath)
+  const ref = useScrollIntoView(
+    node.path,
+    scrollTargetPath,
+    clearScrollTargetPath,
+  )
 
   function handleChevronClick(e: MouseEvent) {
     e.stopPropagation()
@@ -155,7 +157,7 @@ function NodeRow({ node, depth }: NodeRowProps) {
       )}
     </div>
   )
-}
+})
 
 function LoadingRow({ depth }: { depth: number }) {
   const paddingLeft = indentPadding(depth, true)

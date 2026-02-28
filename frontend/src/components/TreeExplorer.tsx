@@ -1,12 +1,12 @@
 import { useRoot } from '../hooks/useChildren.ts'
 import { useTreeStore } from '../store/treeStore.ts'
-import TreeNode from './TreeNode.tsx'
+import { TreeNode } from './TreeNode.tsx'
 import type { FlatNode } from '../api/client.ts'
+import { memo } from 'react'
 
 function RootNode({ node }: { node: FlatNode }) {
-  const selectedNode = useTreeStore((s) => s.selectedNode)
+  const isSelected = useTreeStore((s) => s.selectedNode?.path === node.path)
   const setSelectedNode = useTreeStore((s) => s.setSelectedNode)
-  const isSelected = selectedNode?.path === node.path
 
   return (
     <div
@@ -49,7 +49,7 @@ function TreeToolbar() {
   )
 }
 
-export default function TreeExplorer() {
+export const TreeExplorer = memo(function TreeExplorer() {
   const { data, isLoading, error } = useRoot()
 
   if (isLoading) {
@@ -84,4 +84,4 @@ export default function TreeExplorer() {
       </div>
     </div>
   )
-}
+})
