@@ -1,13 +1,13 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { api } from '../api/client.ts'
+import { CHILDREN_PAGE_SIZE } from '../lib/constants.ts'
 import type { FlatNode } from '../api/client.ts'
-
-export const PAGE_SIZE = 100
 
 export function useChildren(nodePath: string, isFetchDisabled: boolean) {
   const query = useInfiniteQuery({
     queryKey: ['children', nodePath],
-    queryFn: ({ pageParam }) => api.getChildren(nodePath, PAGE_SIZE, pageParam),
+    queryFn: ({ pageParam }) =>
+      api.getChildren(nodePath, CHILDREN_PAGE_SIZE, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, _all, lastPageParam) => {
       const nextOffset = lastPageParam + lastPage.children.length

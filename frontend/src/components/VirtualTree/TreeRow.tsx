@@ -2,21 +2,10 @@ import type { MouseEvent } from 'react'
 import { memo } from 'react'
 import { useTreeStore } from '../../store/treeStore.ts'
 import { useQueryKeeperRegistry } from '../../context/QueryKeeperContext.ts'
+import { indentPadding } from '../../lib/tree.ts'
+import { formatSize } from '../../lib/format.ts'
+import { Spinner } from '../ui/Spinner.tsx'
 import type { VisibleRow } from '../../types/rows.ts'
-
-/**
- * Calculates left padding for tree indentation at a given depth.
- * Pass `innerContent = true` for rows without a chevron (adds 22px to clear it).
- */
-function indentPadding(depth: number, innerContent = false): number {
-  return 8 + (depth - 1) * 14 + (depth > 1 ? 4 : 0) + (innerContent ? 22 : 0)
-}
-
-/** Formats a node size for compact display (e.g. 1200 -> "1.2k"). */
-function formatSize(size: number): string {
-  if (size >= 1000) return `${(size / 1000).toFixed(1)}k`
-  return String(size)
-}
 
 type Props = {
   row: VisibleRow
@@ -98,22 +87,20 @@ function LoadingRow({
       className="flex items-center gap-2 py-1.5 text-xs text-text-3"
       style={{ paddingLeft }}
     >
-      <span className="w-3 h-3 border-2 border-border-bright border-t-accent rounded-full animate-spin shrink-0" />
+      <Spinner />
       Loading...
     </div>
   )
 }
 
 function LoadRow({ row }: { row: Extract<VisibleRow, { kind: 'load' }> }) {
-  const removeFromDisabledFetch = useTreeStore(
-    (s) => s.removeFromDisabledFetch,
-  )
+  const enableFetch = useTreeStore((s) => s.enableFetch)
   const paddingLeft = indentPadding(row.depth, true)
   return (
     <button
       className="flex items-center gap-1.5 py-1.5 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer bg-transparent border-none w-full text-left"
       style={{ paddingLeft }}
-      onClick={() => removeFromDisabledFetch(row.parentPath)}
+      onClick={() => enableFetch(row.parentPath)}
     >
       <svg className="w-3 h-3 shrink-0" viewBox="0 0 12 12" fill="none">
         <path
@@ -146,7 +133,7 @@ function LoadMoreRow({
     >
       {isLoading ? (
         <>
-          <span className="w-3 h-3 border-2 border-border-bright border-t-accent rounded-full animate-spin shrink-0" />
+          <Spinner />
           Loading...
         </>
       ) : (

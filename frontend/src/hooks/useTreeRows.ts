@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTreeStore } from '../store/treeStore.ts'
+import { directChildSegment } from '../lib/tree.ts'
 import type { FlatNode } from '../api/client.ts'
 import type {
   VisibleRow,
@@ -37,17 +38,14 @@ function mergeSyntheticChildren(
   nodePath: string,
 ): FlatNode[] {
   let result = fetchedChildren
-  const prefix = nodePath + ' > '
   const fetchedPaths = new Set(fetchedChildren.map((c) => c.path))
   const inserted = new Set<string>()
 
   for (const pathSet of [expandedPaths, syntheticPaths]) {
     for (const candidatePath of pathSet) {
       if (inserted.has(candidatePath)) continue
-      const isDescendant = candidatePath.startsWith(prefix)
-      const rest = candidatePath.slice(prefix.length)
-      const isDirectChild = isDescendant && rest.length > 0 && !rest.includes(' > ')
-      if (isDirectChild && !fetchedPaths.has(candidatePath)) {
+      const childSegment = directChildSegment(nodePath, candidatePath)
+      if (childSegment !== null && !fetchedPaths.has(candidatePath)) {
         inserted.add(candidatePath)
         result = insertSorted(result, {
           path: candidatePath,
@@ -90,9 +88,9 @@ function buildRows(
 
     const { node, depth } = entry
     const isExpanded = expandedPaths.has(node.path)
-    const isFetchDisabled = syntheticPaths.has(node.path)
+    const isSynthetic = syntheticPaths.has(node.path)
 
-    rows.push({ kind: 'node', node, depth, isExpanded, isFetchDisabled })
+    rows.push({ kind: 'node', node, depth, isExpanded, isSynthetic })
 
     if (!isExpanded) continue
 
@@ -112,10 +110,10 @@ function buildRows(
       node.path,
     )
 
-    const isLoading = queryState?.status === 'pending' && !isFetchDisabled
+    const isLoading = queryState?.status === 'pending' && !isSynthetic
     const total = queryData?.pages[queryData.pages.length - 1]?.total ?? 0
     const hasNextPage =
-      !isFetchDisabled && fetchedChildren.length < total && total > 0
+      !isSynthetic && fetchedChildren.length < total && total > 0
     const isFetchingNextPage =
       queryState?.fetchStatus === 'fetching' && queryData != null
 
@@ -128,7 +126,7 @@ function buildRows(
       }
       trailingRows.push(r)
     }
-    if (isFetchDisabled) {
+    if (isSynthetic) {
       const r: LoadVisibleRow = {
         kind: 'load',
         parentPath: node.path,
