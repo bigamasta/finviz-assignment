@@ -5,6 +5,7 @@ import { useTreeStore } from './store/treeStore.ts'
 import { TreeExplorer } from './components/TreeExplorer.tsx'
 import NodeDetail from './components/NodeDetail/index.tsx'
 import SearchResults from './components/SearchResults/index.tsx'
+import { SEARCH_MIN_LENGTH } from './lib/constants.ts'
 import type { FlatNode } from './api/client.ts'
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
   const setScrollTargetPath = useTreeStore((s) => s.setScrollTargetPath)
   const expandToNode = useTreeStore((s) => s.expandToNode)
 
-  const isSearching = debouncedSearch.trim().length >= 2
+  const isSearching = debouncedSearch.trim().length >= SEARCH_MIN_LENGTH
 
   const handleSearchSelect = useCallback(
     (node: FlatNode) => {

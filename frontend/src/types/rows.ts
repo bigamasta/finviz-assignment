@@ -5,7 +5,8 @@ export type NodeVisibleRow = {
   node: FlatNode
   depth: number
   isExpanded: boolean
-  isFetchDisabled: boolean
+  /** True when this node was expanded via search navigation, not manual click. */
+  isSynthetic: boolean
 }
 
 export type LoadingVisibleRow = {
