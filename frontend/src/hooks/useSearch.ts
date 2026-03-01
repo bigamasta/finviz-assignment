@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client.ts'
+import { SEARCH_MIN_LENGTH } from '../lib/constants.ts'
 
 const PAGE_SIZE = 20
 
@@ -11,7 +12,7 @@ export function useSearch(query: string) {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['search', query, offset],
     queryFn: () => api.search(query, PAGE_SIZE, offset),
-    enabled: query.trim().length >= 2,
+    enabled: query.trim().length >= SEARCH_MIN_LENGTH,
     placeholderData: (prev) => prev,
   })
 

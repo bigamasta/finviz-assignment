@@ -3,6 +3,7 @@ import type { FlatNode } from '../../api/client.ts'
 import { ResultItem } from './ResultItem.tsx'
 import { ResultsHeader } from './ResultsHeader.tsx'
 import { Pagination } from './Pagination.tsx'
+import { Spinner } from '../ui/Spinner.tsx'
 
 type Props = {
   query: string
@@ -56,7 +57,7 @@ export default function SearchResults({ query, onSelect }: Props) {
 function SearchLoading() {
   return (
     <div className="flex items-center justify-center gap-2.5 p-6 text-text-2 text-sm">
-      <span className="w-3.5 h-3.5 border-2 border-border-bright border-t-accent rounded-full animate-spin shrink-0" />
+      <Spinner size="md" />
       Searching...
     </div>
   )

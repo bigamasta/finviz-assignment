@@ -1,7 +1,7 @@
 import { memo, useEffect } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { api } from '../../api/client.ts'
-import { PAGE_SIZE } from '../../hooks/useChildren.ts'
+import { CHILDREN_PAGE_SIZE } from '../../lib/constants.ts'
 import { useQueryKeeperRegistry } from '../../context/QueryKeeperContext.ts'
 import { useTreeStore } from '../../store/treeStore.ts'
 
@@ -23,10 +23,10 @@ const QueryKeeper = memo(function QueryKeeper({
 
   const { fetchNextPage } = useInfiniteQuery({
     queryKey: ['children', path],
-    queryFn: ({ pageParam }) => api.getChildren(path, PAGE_SIZE, pageParam),
+    queryFn: ({ pageParam }) => api.getChildren(path, CHILDREN_PAGE_SIZE, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, _all, lastPageParam) => {
-      const nextOffset = (lastPageParam as number) + lastPage.children.length
+      const nextOffset = lastPageParam + lastPage.children.length
       return nextOffset < lastPage.total ? nextOffset : undefined
     },
     enabled: !isFetchDisabled,

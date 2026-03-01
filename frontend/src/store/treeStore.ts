@@ -17,7 +17,7 @@ type TreeActions = {
   toggleExpanded: (path: string) => void
   collapseAll: () => void
   expandToNode: (path: string) => void
-  removeFromDisabledFetch: (path: string) => void
+  enableFetch: (path: string) => void
   setSelectedNode: (node: FlatNode | null) => void
   setScrollTargetPath: (path: string | null) => void
   clearScrollTargetPath: () => void
@@ -80,8 +80,8 @@ export const useTreeStore = create<TreeState & TreeActions>((set) => ({
       return { expandedPaths: nextExpanded, syntheticPaths: nextSynthetic }
     }),
 
-  // Called when user clicks "Load" — removes from syntheticPaths to enable fetch
-  removeFromDisabledFetch: (path) =>
+  // Called when user clicks "Load" — removes path from syntheticPaths to enable fetch
+  enableFetch: (path) =>
     set((state) => {
       const nextSynthetic = new Set(state.syntheticPaths)
       nextSynthetic.delete(path)
