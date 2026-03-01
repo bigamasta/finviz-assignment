@@ -17,7 +17,7 @@ export async function nodesRoutes(app: FastifyInstance) {
       SELECT path, name, parent_path, depth, size
       FROM taxonomy_nodes
       WHERE depth <= 1
-      ORDER BY depth ASC, name ASC
+      ORDER BY depth ASC, LOWER(name) ASC, name ASC
     `
 
     if (rows.length === 0) {
@@ -67,7 +67,7 @@ export async function nodesRoutes(app: FastifyInstance) {
           SELECT path, name, size
           FROM taxonomy_nodes
           WHERE parent_path = ${path}
-          ORDER BY name ASC
+          ORDER BY LOWER(name) ASC, name ASC
           LIMIT ${lim} OFFSET ${off}
         `,
         sql<{ count: string }[]>`
