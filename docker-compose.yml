@@ -18,7 +18,9 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     depends_on:
       db:
         condition: service_healthy
@@ -31,7 +33,9 @@ services:
       - ./data:/app/data
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     depends_on:
       - backend
     ports:

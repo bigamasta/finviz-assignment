@@ -21,16 +21,33 @@ cd frontend && npm install
 npm run dev        # starts Vite on :5173
 ```
 
-Or run everything with Docker:
+---
+
+## Docker
+
+### Development
+
+Uses Vite dev server (HMR, source maps) and `tsx` watch mode. DB migrate and ingest must be run once manually after the first start.
 
 ```bash
-docker-compose up
-# In a separate terminal, once backend is healthy:
+docker-compose up --build
+
+# First time only — once backend is healthy:
 docker-compose exec backend npm run migrate
 docker-compose exec backend npm run ingest
 ```
 
-Then open **http://localhost:5173**.
+Open **http://localhost:5173**.
+
+### Production
+
+Uses multi-stage builds: TypeScript compiled to JS, frontend bundled and served by nginx. Migrate and ingest run automatically on startup — skipped on subsequent starts if the DB already has data (persisted in the `postgres_data` volume).
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+```
+
+Open **http://localhost**.
 
 ---
 
