@@ -1,6 +1,6 @@
 # ImageNet Taxonomy Explorer
 
-A fullstack application for ingesting, storing, and exploring the ImageNet 2011 taxonomy hierarchy — ~82k nodes, lazily loaded in a tree UI with search.
+A fullstack application for ingesting, storing, and exploring the ImageNet 2011 taxonomy hierarchy — ~82k nodes, lazily loaded in a virtualized tree UI with search.
 
 ---
 
@@ -46,11 +46,16 @@ finviz-assignment/
 │       ├── scripts/         # migrate.ts, ingest.ts
 │       ├── routes/          # nodes.ts, search.ts
 │       └── lib/buildTree.ts # O(n) tree reconstruction
-└── frontend/                # React + TypeScript (Vite)
+└── frontend/                # React 19 + TypeScript (Vite)
     └── src/
         ├── api/client.ts    # typed fetch wrapper
-        ├── hooks/           # TanStack Query hooks + useExpandedPaths
-        └── components/      # TreeExplorer, TreeNode, NodeDetail, SearchResults
+        ├── store/           # Zustand tree UI state (treeStore.ts)
+        ├── hooks/           # TanStack Query hooks + useTreeRows
+        ├── context/         # QueryKeeperContext (virtual list cache keeper)
+        └── components/
+            ├── VirtualTree/ # useVirtualizer flat list + QueryKeepers
+            ├── NodeDetail/  # breadcrumbs, stats, size bar
+            └── SearchResults/
 ```
 
 ---
@@ -114,6 +119,30 @@ All data fetching uses TanStack Query instead of `useState/useEffect`. Benefits:
 - Loading/error states without boilerplate
 - `placeholderData` for search keeps previous results visible while new ones load
 
+### 7. TanStack Virtual — flat virtual list
+
+The tree is rendered as a **flat virtual list** rather than a recursive component tree.
+
+**The problem with recursive trees**: each expanded node adds real DOM nodes. With thousands of nodes expanded, the DOM grows unboundedly — causing scroll paint overhead and slow unmount cascades when collapsing large subtrees.
+
+**The solution**: `useTreeRows` builds a flat `VisibleRow[]` array from Zustand state via DFS. `useVirtualizer` renders only ~30 rows at any time (fixed 32px row height), regardless of how many nodes are expanded. Indentation and chevrons are drawn per-row using the depth field — visually identical to a recursive tree.
+
+**The cache-keeper problem**: TanStack Query unmounts its cache when the component using it unmounts. If a row holding query data scrolls out of the virtual window, the cache evicts. To prevent this, `QueryKeeper` components are mounted invisibly alongside the virtual list — one per expanded path — keeping `useInfiniteQuery` alive even when their rows are off-screen.
+
+**Search navigation**: `scrollToIndex` replaces DOM `scrollIntoView`, giving O(1) jump-to-row instead of a DOM traversal.
+
+### 8. Zustand for tree UI state
+
+Tree UI state (expanded paths, selected node, scroll target, `syntheticPaths`) is managed in a **Zustand store** rather than lifted React state.
+
+**Why**: the recursive tree previously required threading 8+ props through every level of `TreeNode`. Zustand lets any component read or update state directly, which also made extracting `VirtualTree` clean — it just subscribes to the store with no prop interface.
+
+**`syntheticPaths`**: a special set of paths opened via search navigation (not by user click). These disable auto-fetch (the data was already injected client-side) and are kept alive across collapse/re-expand so search-navigated nodes never silently disappear from the tree.
+
+### 9. Case-insensitive sorting
+
+Tree children are sorted case-insensitively (AaBbCc order) rather than ASCII order (ABCabc). This is a small but visible UX detail — "acrogen" sorts before "Aquatic" rather than after it.
+
 ---
 
 ## API Reference
@@ -131,8 +160,9 @@ All data fetching uses TanStack Query instead of `useState/useEffect`. Benefits:
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18, TypeScript, Vite |
-| State/Fetching | TanStack Query v5 |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
+| State/Fetching | TanStack Query v5, Zustand v5 |
+| Virtualization | TanStack Virtual v3 |
 | Backend | Node.js, TypeScript, Fastify v4 |
 | Database | PostgreSQL 16 |
 | DB Client | `postgres` (porsager) |
@@ -141,11 +171,13 @@ All data fetching uses TanStack Query instead of `useState/useEffect`. Benefits:
 
 ---
 
-## What I'm Most Proud Of
+## Technical Highlights
 
-**The O(n) tree algorithm with stored `parent_path`**: it's a deliberate design choice that connects the schema to the algorithm cleanly. The DB schema exists to serve the query patterns, not just to satisfy the spec's minimum.
+**The O(n) tree algorithm with stored `parent_path`**: a deliberate design choice that connects the schema to the algorithm cleanly. The DB schema exists to serve the query patterns, not just to satisfy the spec's minimum.
 
-**The lazy loading implementation**: it correctly handles the tree UI's inherent complexity (recursive components, expand/collapse state, deduplication) without any client-side state management library — just React component state + TanStack Query.
+**The virtual flat list**: transforming a recursive tree into a virtualised flat list (with `QueryKeeper` to preserve the TanStack Query cache for off-screen rows) handles the full depth of the dataset without any DOM bloat, while remaining visually indistinguishable from a recursive tree.
+
+**Zustand + TanStack Query separation of concerns**: Zustand owns UI state (what's expanded, selected, synthetic), TanStack Query owns server data. The two never overlap, which makes the data flow easy to reason about even as the tree interaction logic grew complex.
 
 ---
 
@@ -155,6 +187,9 @@ All data fetching uses TanStack Query instead of `useState/useEffect`. Benefits:
 |----------|------------|-----------------|
 | Store `parent_path` (denormalized) | Only store `path` + split in app | O(1) DB children query vs. O(d) string split |
 | Search `name` only | Search full `path` | Precision over recall; full path shown in results |
-| Lazy load per-node | Virtualized flat list | More natural UX for hierarchical data |
+| Lazy load per-node | Load full dataset | Keeps initial payload under 1KB regardless of dataset size |
+| Virtual flat list (TanStack Virtual) | Recursive component tree | O(1) scroll, constant DOM size (~30 nodes), no unmount cascades |
+| Zustand for tree state | Lifted React state + prop drilling | Eliminates 8+ prop chains; VirtualTree subscribes without a prop interface |
+| `QueryKeeper` invisible components | Re-fetch on scroll-back | Preserves TanStack Query cache for off-screen expanded rows |
 | `ILIKE` sequential scan | `pg_trgm` trigram index | 60k rows is small; avoid extension complexity |
 | Full TypeScript stack | C# backend | Personal strength — asked in the brief to use what I'm best at |
