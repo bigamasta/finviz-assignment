@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { nodesRoutes } from './routes/nodes.js';
 import { searchRoutes } from './routes/search.js';
+import { sql } from './db/index.js';
 
 const app = Fastify({ logger: true });
 
@@ -15,6 +16,15 @@ await app.register(searchRoutes, { prefix: '/api/search' });
 app.get('/health', async () => ({ status: 'ok' }));
 
 const port = parseInt(process.env.PORT ?? '3001', 10);
+
+const shutdown = async () => {
+  await app.close();
+  await sql.end();
+  process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 try {
   await app.listen({ port, host: '0.0.0.0' });

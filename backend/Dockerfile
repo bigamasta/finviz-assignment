@@ -1,4 +1,5 @@
-FROM node:22-alpine
+# ---- Build stage ----
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -8,6 +9,19 @@ RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
 
-EXPOSE 3001
+RUN npm run build
 
-CMD ["npx", "tsx", "src/index.ts"]
+# ---- Production stage ----
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/dist ./dist
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
+EXPOSE 3001
+CMD ["sh", "entrypoint.sh"]
