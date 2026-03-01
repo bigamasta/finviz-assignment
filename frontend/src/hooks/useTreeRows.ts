@@ -15,9 +15,13 @@ type InfiniteData = {
 }
 
 function insertSorted(children: FlatNode[], node: FlatNode): FlatNode[] {
-  const insertAt = children.findIndex(
-    (c) => c.name.localeCompare(node.name) > 0,
-  )
+  const insertAt = children.findIndex((c) => {
+    const baseCmp = c.name.localeCompare(node.name, undefined, {
+      sensitivity: 'base',
+    })
+    if (baseCmp !== 0) return baseCmp > 0
+    return c.name.localeCompare(node.name) > 0
+  })
   if (insertAt === -1) return [...children, node]
   return [
     ...children.slice(0, insertAt),
